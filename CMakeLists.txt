@@ -9,7 +9,7 @@ else()
   message(FATAL_ERROR "Unable to find OpenGL")
 endif()
 
-# Use GLEW to work with OpenGL
+# Find GLEW
 find_package(GLEW)
 if(GLEW_FOUND)
   message(STATUS "Found GLEW")
@@ -25,13 +25,16 @@ else()
   endif()
 endif()
 
+# Find GLFW
 # TODO(colintan): Get rid of hardcoding
 # HACK(colintan): Hardcode paths to GLFW for now
 set(GLFW_INCLUDE_DIRS "D:/glfw-3.3/include")
 set(GLFW_STATIC_LIBRARIES "D:/glfw-3.3/lib-vc2019/")
 
 # Library that contains utils commonly used in the projects
+# NOTE: Must be added before any of the graphics projects so that the projects
+# can link to the utils lib
 add_subdirectory(graphics_utils)
 
-# Place the targets for the graphics projects here
+# Place targets for the graphics projects here
 add_subdirectory(hello_triangle)
