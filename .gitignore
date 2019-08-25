@@ -1,0 +1,8 @@
+# Ignore any possible build folders
+/build
+/out
+
+# Ignore any files or folders by visual studio or vs code
+/.vs
+/.vscode
+.editorconfig
