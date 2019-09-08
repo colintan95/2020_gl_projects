@@ -9,7 +9,7 @@
 #endif
 #include "GLFW/glfw3.h"
 
-#include "graphics_utils/shader.h"
+#include "gfx_utils/shader.h"
 
 static const std::string vert_shader_path = "shaders/screen_color.vert";
 static const std::string frag_shader_path = "shaders/screen_color.frag";
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 
   glfwMakeContextCurrent(window);
 
-  // TODO(colintan): Is this needed?
+  // TODO(colintan): Is glewExperimental needed?
   glewExperimental = true;
   if (glewInit() != GLEW_OK) {
     std::cerr << "Failed to initialize GLEW" << std::endl;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   std::cout << "GLEW initialized" << std::endl;
 
   std::string vert_shader_src;
-  if (!LoadShaderSource(&vert_shader_src, vert_shader_path)) {
+  if (!gfx_utils::LoadShaderSource(&vert_shader_src, vert_shader_path)) {
     std::cerr << "Could not find vertex shader source at " 
         << vert_shader_path  << std::endl;
     exit(1);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   }
   
   std::string frag_shader_src;
-  if (!LoadShaderSource(&frag_shader_src, frag_shader_path)) {
+  if (!gfx_utils::LoadShaderSource(&frag_shader_src, frag_shader_path)) {
     std::cerr << "Could not find fragment shader source at: "
       << frag_shader_path << std::endl;
     exit(1);

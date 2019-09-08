@@ -24,12 +24,10 @@ target_include_directories(hello_triangle PUBLIC "${GLFW_INCLUDE_DIRS}")
 target_link_libraries(hello_triangle PUBLIC 
     "${GLFW_STATIC_LIBRARIES}/glfw3.lib")
 
-# Use our graphics_utils library
-target_link_libraries(hello_triangle PUBLIC graphics_utils)
+# Use our gfx_utils library
+target_link_libraries(hello_triangle PUBLIC gfx_utils)
 
-# TODO(colintan): How to force a new copy when any of the shaders are modified -
-# right now changes may not be copied into the executable folder automatically
-# Copy our shaders to where the executable is
+# In the binary folder, create a symlink to the shaders folder
 add_custom_command(TARGET hello_triangle POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/shaders" 
+    -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/shaders" 
     "${CMAKE_CURRENT_BINARY_DIR}/shaders")

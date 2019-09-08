@@ -31,10 +31,19 @@ endif()
 set(GLFW_INCLUDE_DIRS "D:/glfw-3.3/include")
 set(GLFW_STATIC_LIBRARIES "D:/glfw-3.3/lib-vc2019/")
 
+# All other external libraries in the third_party folder
+set(TINYOBJLOADER_INCLUDE_DIRS 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/tinyobjloader/include")
+set(GLM_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm/include")
+set(STB_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/include")
+
 # Library that contains utils commonly used in the projects
 # NOTE: Must be added before any of the graphics projects so that the projects
 # can link to the utils lib
-add_subdirectory(graphics_utils)
+add_subdirectory(gfx_utils)
 
 # Place targets for the graphics projects here
 add_subdirectory(hello_triangle)
+add_subdirectory(hello_mesh)
