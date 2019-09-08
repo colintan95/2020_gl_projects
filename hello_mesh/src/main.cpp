@@ -79,6 +79,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  // Enable all necessary GL settings
+  glEnable(GL_TEXTURE_2D);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+
   GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
 
   char const *vert_shader_src_ptr = vert_shader_src.c_str();
@@ -157,12 +162,14 @@ int main(int argc, char *argv[]) {
   glDeleteShader(vert_shader_id);
   
   glUseProgram(program_id);
-
-  glm::mat4 model_mat = glm::rotate(glm::mat4(1.f), 
-                                    -(static_cast<float>(kPi)/2.f),
-                                    glm::vec3(1.f, 0.f, 0.f));
+  glm::mat4 model_mat = 
+      glm::translate(glm::mat4(1.f), glm::vec3(0.f, -7.5f, 0.f)) *
+      glm::rotate(glm::mat4(1.f), -(static_cast<float>(kPi)/2.f),
+                  glm::vec3(1.f, 0.f, 0.f));
   glm::mat4 view_mat = 
-      glm::translate(glm::mat4(1.f), glm::vec3(0.f, -8.f, -50.f));
+      glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -60.f)) *
+      glm::rotate(glm::mat4(1.f), (static_cast<float>(kPi)/ 8.f),
+                 glm::vec3(1.f, 0.f, 0.f));
   glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
                                         0.1f, 100.f);
   glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
@@ -191,36 +198,20 @@ int main(int argc, char *argv[]) {
   GLuint pos_vbo_id;
   glGenBuffers(1, &pos_vbo_id);
   glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
-  glBufferData(GL_ARRAY_BUFFER, 
-               mesh.pos_data.size() * 3 * sizeof(float), 
+  glBufferData(GL_ARRAY_BUFFER, mesh.pos_data.size() * 3 * sizeof(float), 
                &mesh.pos_data[0], GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(
-    0,           // index
-    3,           // size
-    GL_FLOAT,    // type
-    GL_FALSE,    // normalized
-    0,           // stride
-    (GLvoid*)0   // pointer
-  );
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
   GLuint texcoord_vbo_id;
   glGenBuffers(1, &texcoord_vbo_id);
   glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
-  glBufferData(GL_ARRAY_BUFFER, 
-               mesh.texcoord_data.size() * 2 * sizeof(float), 
+  glBufferData(GL_ARRAY_BUFFER, mesh.texcoord_data.size() * 2 * sizeof(float), 
                &mesh.texcoord_data[0], GL_STATIC_DRAW);
 
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(
-    1,           // index
-    2,           // size
-    GL_FLOAT,    // type
-    GL_FALSE,    // normalized
-    0,           // stride
-    (GLvoid*)0   // pointer
-  );
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -238,7 +229,7 @@ int main(int argc, char *argv[]) {
   bool should_quit = false;
 
   while (!should_quit) {
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
 
