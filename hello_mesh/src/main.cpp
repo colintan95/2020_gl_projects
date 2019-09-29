@@ -60,18 +60,13 @@ int main(int argc, char *argv[]) {
 
   std::cout << "GLEW initialized" << std::endl;
 
-  gfx_utils::Mesh mesh;
-  if (!gfx_utils::CreateMeshFromFile(&mesh, "assets/teapot.obj")) {
+  std::vector<gfx_utils::Mesh> meshes;
+  if (!gfx_utils::CreateMeshesFromFile(&meshes, "assets/teapot.obj")) {
     std::cerr << "Failed to load mesh" << std::endl;
     exit(1);
   }
 
-  std::string vert_shader_src;
-  if (!gfx_utils::LoadShaderSource(&vert_shader_src, vert_shader_path)) {
-    std::cerr << "Failed to find vertex shader source at " 
-        << vert_shader_path  << std::endl;
-    exit(1);
-  }
+  gfx_utils::Mesh mesh = meshes[0];
 
   gfx_utils::Texture texture;
   if (!gfx_utils::CreateTextureFromFile(&texture, "assets/teapot_tex.jpg")) {
@@ -83,6 +78,13 @@ int main(int argc, char *argv[]) {
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
+
+  std::string vert_shader_src;
+  if (!gfx_utils::LoadShaderSource(&vert_shader_src, vert_shader_path)) {
+    std::cerr << "Failed to find vertex shader source at "
+      << vert_shader_path << std::endl;
+    exit(1);
+  }
 
   GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
 

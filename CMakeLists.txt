@@ -47,3 +47,4 @@ add_subdirectory(gfx_utils)
 # Place targets for the graphics projects here
 add_subdirectory(hello_triangle)
 add_subdirectory(hello_mesh)
+add_subdirectory(hello_sponza)
