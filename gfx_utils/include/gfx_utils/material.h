@@ -5,6 +5,8 @@
 
 #include <string>
 
+#include "texture.h"
+
 namespace gfx_utils {
 
 enum IllumModel {
@@ -23,6 +25,8 @@ struct Material {
   float shininess;
 
   IllumModel illum;
+
+  Texture texture;
 };
 
 }

@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
   glUseProgram(program_id);
   glm::mat4 model_mat = glm::mat4(1.f);
   glm::mat4 view_mat = 
-    glm::translate(glm::mat4(1.f), glm::vec3(0.f, -20.f, 0.f)) *
+    glm::translate(glm::mat4(1.f), glm::vec3(-100.f, -100.f, 0.f)) *
     glm::rotate(glm::mat4(1.f), (static_cast<float>(kPi) / 2.f),
         glm::vec3(0.f, 1.f, 0.f));
   //glm::mat4 view_mat =
@@ -201,6 +201,23 @@ int main(int argc, char *argv[]) {
   glUniform1i(texture_loc, 0);
   glBindTexture(GL_TEXTURE_2D, 0);
 */
+
+  std::vector<GLuint> texture_id_list;
+
+  // TODO(colintan): Figure out how to share textures and materials - 
+  // Consider some sort of handle system (e.g. using uint to index the texture
+  // and material)
+  for (const auto& mesh : meshes) {
+    for (const auto& mtl : mesh.material_list) {
+      if (mtl.texture.tex_data.size() != 0) {
+        
+      }
+      else {
+        texture_id_list
+      }
+    }
+  }
+
   GLuint vao_id;
   glGenVertexArrays(1, &vao_id);
 
@@ -232,14 +249,19 @@ int main(int argc, char *argv[]) {
       &mesh.texcoord_data[0], GL_STATIC_DRAW);
     texcoord_vbo_id_list.push_back(texcoord_vbo_id);
 
-    GLuint mtl_vbo_id;
-    glGenBuffers(1, &mtl_vbo_id);
-    glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, 
-      mesh.mtl_id_data.size() * sizeof(unsigned int), 
-      &mesh.mtl_id_data[0], 
-      GL_STATIC_DRAW);
-    mtl_vbo_id_list.push_back(mtl_vbo_id);
+    if (mesh.material_list.size() != 0) {
+      GLuint mtl_vbo_id;
+      glGenBuffers(1, &mtl_vbo_id);
+      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
+      glBufferData(GL_ARRAY_BUFFER, 
+        mesh.mtl_id_data.size() * sizeof(unsigned int), 
+        &mesh.mtl_id_data[0], 
+        GL_STATIC_DRAW);
+      mtl_vbo_id_list.push_back(mtl_vbo_id);
+    }
+    else {
+      mtl_vbo_id_list.push_back(0);
+    }
 
     GLuint ibo_id;
     glGenBuffers(1, &ibo_id);
@@ -272,9 +294,14 @@ int main(int argc, char *argv[]) {
       glEnableVertexAttribArray(2);
       glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list[i]);
-      glEnableVertexAttribArray(3);
-      glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
+      if (meshes[i].material_list.size() != 0) {
+        glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list[i]);
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
+      }
+      else {
+        // TODO(colintan): Disable materials for this mesh
+      }
 
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[i]);
       glDrawElements(GL_TRIANGLES, meshes[i].num_verts, GL_UNSIGNED_INT,

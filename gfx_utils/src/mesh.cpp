@@ -7,6 +7,8 @@
 #include <tuple>
 #include <unordered_map>
 
+#include "gfx_utils/texture.h"
+
 namespace gfx_utils {
 
 bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes, 
@@ -125,6 +127,16 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
           break;
         }
 
+        if (!loader_mtl.ambient_texname.empty()) {
+          std::string path = "assets/" + loader_mtl.ambient_texname;
+
+          if (!CreateTextureFromFile(&mtl.texture, path)) {
+            std::cerr << "Could not load texture: " << path << std::endl;
+            out_meshes->clear();
+            return false;
+          }
+        }
+
         mtl_conversion_table[loader_id] = out_mesh.material_list.size();
         out_mesh.material_list.push_back(mtl);
       }
@@ -148,6 +160,9 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
     out_mesh.num_verts = out_mesh.index_data.size();
 
     out_meshes->push_back(out_mesh);
+
+    // TODO(colintan): Remove this after testing
+    break;
   }
 
   return true;
