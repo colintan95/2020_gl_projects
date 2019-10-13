@@ -17,7 +17,7 @@ bool CreateTextureFromFile(Texture* out_tex, const std::string& path) {
   int tex_height = -1;
   int channels = -1;
 
-  // TODO(colintan): See how to support alpha
+  stbi_set_flip_vertically_on_load(true);
   stbi_uc *pixels = stbi_load(path.c_str(), &tex_width, &tex_height, &channels, 
                               0);
 
