@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <GL/glew.h>
 #if defined(WIN32)
@@ -68,19 +69,22 @@ int main(int argc, char *argv[]) {
 
   std::cout << "Number of meshes loaded: " << meshes.size() << std::endl;
 
-/*
-  gfx_utils::Mesh mesh;
-  if (!gfx_utils::CreateMeshFromFile(&mesh, "assets/teapot.obj")) {
-    std::cerr << "Failed to load mesh" << std::endl;
-    exit(1);
+  std::unordered_map<std::string, gfx_utils::Texture> texture_data_map;
+
+  for (const auto& mesh : meshes) {
+    for (const auto& mtl : mesh.material_list) {
+      if (!mtl.texture_path.empty() && 
+          texture_data_map.find(mtl.texture_path) == texture_data_map.end()) {
+        texture_data_map[mtl.texture_path] = gfx_utils::Texture();
+        if (!gfx_utils::CreateTextureFromFile(&texture_data_map[mtl.texture_path], 
+                mtl.texture_path)) {
+          std::cerr << "Could not load texture: " << mtl.texture_path << std::endl;
+          exit(1);
+        }
+      }
+    }
   }
 
-  gfx_utils::Texture texture;
-  if (!gfx_utils::CreateTextureFromFile(&texture, "assets/teapot_tex.jpg")) {
-    std::cerr << "Failed to load texture" << std::endl;
-    exit(1);
-  }
-*/
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
@@ -186,36 +190,31 @@ int main(int argc, char *argv[]) {
 
   GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");
   glUniformMatrix4fv(mvp_mat_loc, 1, GL_FALSE, glm::value_ptr(mvp_mat));
-/*
-  GLuint texture_id;
-  glGenTextures(1, &texture_id);
-  glBindTexture(GL_TEXTURE_2D, texture_id);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.tex_width, texture.tex_height, 
-               0, GL_RGB, GL_UNSIGNED_BYTE, &texture.tex_data[0]);
-  glActiveTexture(GL_TEXTURE0);
-  GLint texture_loc = glGetUniformLocation(program_id, "mesh_texture");
-  glUniform1i(texture_loc, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-*/
 
-  std::vector<GLuint> texture_id_list;
+  std::unordered_map<std::string, GLuint> texture_id_map;
 
   // TODO(colintan): Figure out how to share textures and materials - 
   // Consider some sort of handle system (e.g. using uint to index the texture
   // and material)
-  for (const auto& mesh : meshes) {
-    for (const auto& mtl : mesh.material_list) {
-      if (mtl.texture.tex_data.size() != 0) {
-        
-      }
-      else {
-        texture_id_list
-      }
-    }
+  for (auto it = texture_data_map.begin(); it != texture_data_map.end(); ++it) {
+    const std::string& texture_path = it->first;
+    const gfx_utils::Texture& texture = it->second;
+
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    GLenum format = texture.has_alpha ? GL_RGBA : GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, texture.tex_width, 
+      texture.tex_height, 0, format, GL_UNSIGNED_BYTE, &texture.tex_data[0]);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    texture_id_map[texture_path] = texture_id;
   }
 
   GLuint vao_id;
@@ -273,6 +272,8 @@ int main(int argc, char *argv[]) {
     ibo_id_list.push_back(ibo_id);
   }
 
+  GLint materials_loc = glGetUniformLocation(program_id, "materials");
+
   bool should_quit = false;
 
   while (!should_quit) {
@@ -280,6 +281,24 @@ int main(int argc, char *argv[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (size_t i = 0; i < meshes.size(); ++i) {
+      // Set the materials data in the fragment shader
+
+      const auto& mtl_list = meshes[i].material_list;
+      for (size_t j = 0; j < mtl_list.size(); ++j) {
+        GLint base_idx = materials_loc + j * 6;
+        glUniform3fv(base_idx + 0, 1, glm::value_ptr(mtl_list[j].ambient));
+        glUniform3fv(base_idx + 1, 1, glm::value_ptr(mtl_list[j].diffuse));
+        glUniform3fv(base_idx + 2, 1, glm::value_ptr(mtl_list[j].specular));
+        glUniform3fv(base_idx + 3, 1, glm::value_ptr(mtl_list[j].emission));
+        glUniform1f(base_idx + 4, mtl_list[j].shininess);
+        glUniform1f(base_idx + 5, j); // We start with texture unit 0
+
+        glActiveTexture(GL_TEXTURE0 + j);
+        glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl_list[j].texture_path]);
+      }
+
+      // Set vertex attributes
+
       glBindVertexArray(vao_id);
 
       glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[i]);
@@ -298,6 +317,10 @@ int main(int argc, char *argv[]) {
         glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list[i]);
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture_id_map[meshes[i].material_list[0].texture_path]);
+
       }
       else {
         // TODO(colintan): Disable materials for this mesh
@@ -316,6 +339,10 @@ int main(int argc, char *argv[]) {
     if (glfwWindowShouldClose(window) == 1) {
       should_quit = true;
     }
+  }
+
+  for (auto it = texture_id_map.begin(); it != texture_id_map.end(); ++it) {
+    glDeleteTextures(1, &it->second);
   }
 
   glDeleteBuffers(ibo_id_list.size(), &ibo_id_list[0]);

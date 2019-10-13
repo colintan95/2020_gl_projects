@@ -12,10 +12,11 @@ struct Material {
   vec3 specular;
   vec3 emission;
   float shininess;
+  sampler2D texture;
 };
 
 uniform Material materials[10];
 
 void main() {
-  out_color = vec4(frag_texcoord, 0.0, 1.0);
+  out_color = texture(materials[frag_mtl_id].texture, frag_texcoord);
 }

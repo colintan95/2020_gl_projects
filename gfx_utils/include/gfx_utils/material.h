@@ -26,7 +26,7 @@ struct Material {
 
   IllumModel illum;
 
-  Texture texture;
+  std::string texture_path;
 };
 
 }

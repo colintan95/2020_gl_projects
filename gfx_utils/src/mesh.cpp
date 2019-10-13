@@ -128,13 +128,7 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
         }
 
         if (!loader_mtl.ambient_texname.empty()) {
-          std::string path = "assets/" + loader_mtl.ambient_texname;
-
-          if (!CreateTextureFromFile(&mtl.texture, path)) {
-            std::cerr << "Could not load texture: " << path << std::endl;
-            out_meshes->clear();
-            return false;
-          }
+          mtl.texture_path = "assets/" + loader_mtl.ambient_texname;
         }
 
         mtl_conversion_table[loader_id] = out_mesh.material_list.size();
@@ -160,9 +154,6 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
     out_mesh.num_verts = out_mesh.index_data.size();
 
     out_meshes->push_back(out_mesh);
-
-    // TODO(colintan): Remove this after testing
-    break;
   }
 
   return true;

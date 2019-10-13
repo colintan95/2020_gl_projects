@@ -7,7 +7,7 @@ layout(location = 3) in uint vert_mtl_id;
 
 out vec3 frag_normal;
 out vec2 frag_texcoord;
-out uint frag_mtl_id;
+flat out uint frag_mtl_id;
 
 uniform mat4 mvp_mat;
 uniform mat3 normal_mat;
