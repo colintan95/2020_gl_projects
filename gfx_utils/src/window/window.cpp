@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <cassert>
+#include <array>
+#include <utility>
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -37,10 +39,6 @@ Window::~Window() {
 
   instance_ptr_ = nullptr;
   has_instance_ = false;
-}
-
-void TestAction() {
-  std::cout << "Action!" << std::endl;
 }
 
 bool Window::Inititalize() {
@@ -84,11 +82,7 @@ bool Window::Inititalize() {
   glfwSetKeyCallback(glfw_window_, KeyboardInputCallback);
   glfwSetCursorPosCallback(glfw_window_, MouseInputCallback);
 
-  KeyActionInfo action_info;
-  action_info.type = KEY_ACTION_HOLD;
-  action_info.func = TestAction;
-
-  key_action_map_[GLFW_KEY_E] = action_info;
+  SetCameraPanMode();
 
   return true;
 }
@@ -115,10 +109,80 @@ glm::mat4 Window::GetViewMatrix() {
   return view_mat_;
 }
 
+void Window::PanCamera(CameraAction action) {
+  assert(action == CAMERA_PAN_LEFT || action == CAMERA_PAN_RIGHT ||
+         action == CAMERA_PAN_UP   || action == CAMERA_PAN_DOWN);
+
+  float d = 1.f;
+
+  glm::vec3 vect;
+  switch (action) {
+  case CAMERA_PAN_LEFT:
+    vect = glm::vec3(d, 0.f, 0.f);
+    break;
+  case CAMERA_PAN_RIGHT:
+    vect = glm::vec3(-d, 0.f, 0.f);
+    break;
+  case CAMERA_PAN_UP:
+    vect = glm::vec3(0.f, -d, 0.f);
+    break;
+  case CAMERA_PAN_DOWN:
+    vect = glm::vec3(0.f, d, 0.f);
+    break;
+  }
+
+  view_mat_ = glm::translate(view_mat_, vect);
+}
+
+void Window::RotateCamera(CameraAction action) {
+  assert(action == CAMERA_ROTATE_LEFT || action == CAMERA_ROTATE_RIGHT);
+  float direction = 0.f;
+
+  if (action == CAMERA_ROTATE_LEFT) {
+    direction = 1.f;
+  }
+  else if (action == CAMERA_ROTATE_RIGHT) {
+    direction = -1.f;
+  }
+
+  // TODO: this is wrong - the camera is rotating around the origin rather
+  // than about itself
+  view_mat_ = glm::rotate(view_mat_, direction * static_cast<float>(kPi) / 60.f,
+                          glm::vec3(0.f, 1.f, 0.f));
+}
+
+void Window::ToggleCameraMode() {
+  // if (camera_mode_ == CAMERA_PAN_MODE) {
+  //   camera_mode_ = CAMERA_ROTATE_MODE;
+  // }
+  // else if (camera_mode_ == CAMERA_ROTATE_MODE) {
+  //   camera_mode_ = CAMERA_PAN_MODE;
+  // }
+}
+
+void Window::SetCameraPanMode() {
+  camera_mode_ = CAMERA_PAN_MODE;
+
+  std::array<std::pair<int, CameraAction>, 4> key_bindings =
+      {{ {GLFW_KEY_A, CAMERA_PAN_LEFT}, {GLFW_KEY_D, CAMERA_PAN_RIGHT},
+         {GLFW_KEY_W, CAMERA_PAN_UP},   {GLFW_KEY_S, CAMERA_PAN_DOWN} }};
+
+  // Registers the keyboard keys to the associated action
+  for (auto it : key_bindings) {
+    KeyActionInfo action_info;
+    action_info.type = KEY_ACTION_HOLD;
+    action_info.func = [=]() {
+      this->PanCamera(it.second);
+    };
+    key_action_map_[it.first] = action_info;
+  }
+}
+
 void Window::TriggerKeyActions() {
   for (auto &it : key_action_map_) {
     if (it.second.status) {
       it.second.func();
+      
       if (it.second.type == KEY_ACTION_PRESS) {
         it.second.status = false;
       }
