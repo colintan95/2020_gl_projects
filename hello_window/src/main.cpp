@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
       glm::translate(glm::mat4(1.f), glm::vec3(0.f, -7.5f, 0.f)) *
       glm::rotate(glm::mat4(1.f), -(static_cast<float>(kPi)/2.f),
                   glm::vec3(1.f, 0.f, 0.f));
-    glm::mat4 view_mat = window.GetViewMatrix();
+    glm::mat4 view_mat = window.CalcViewMatrix();
     glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
                                         0.1f, 100.f);
     glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;

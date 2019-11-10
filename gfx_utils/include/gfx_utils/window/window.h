@@ -29,7 +29,7 @@ public:
 
   bool ShouldQuit();
 
-  glm::mat4 GetViewMatrix();
+  glm::mat4 CalcViewMatrix();
 
 private:
   enum KeyEventType {
@@ -70,6 +70,7 @@ private:
   void ToggleCameraMode();
 
   void SetCameraPanMode();
+  void SetCameraRotateMode();
 
   void TriggerKeyActions();
 
@@ -87,7 +88,10 @@ private:
   bool is_initialized_;
 
   // Camera-related variables
-  glm::mat4 view_mat_;
+  glm::vec3 camera_loc_;
+  float camera_yaw_;
+  float camera_pitch_;
+  float camera_roll_;
   CameraMode camera_mode_;
 
   std::unordered_map<int, KeyActionInfo> key_action_map_;
@@ -99,6 +103,6 @@ private:
   static Window *instance_ptr_;
 };
 
-}
+} // namespace gfx_utils
 
 #endif
