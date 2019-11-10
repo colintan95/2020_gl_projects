@@ -1,4 +1,5 @@
-add_library(gfx_utils src/shader.cpp src/mesh.cpp src/texture.cpp)
+add_library(gfx_utils src/shader.cpp src/mesh.cpp src/texture.cpp 
+                      src/window/window.cpp)
 
 target_include_directories(gfx_utils PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -11,3 +12,23 @@ target_include_directories(gfx_utils PUBLIC "${GLM_INCLUDE_DIRS}")
 
 # Use stb
 target_include_directories(gfx_utils PUBLIC "${STB_INCLUDE_DIRS}")
+
+# Use OpenGL
+target_include_directories(gfx_utils PUBLIC "${OPENGL_INCLUDE_DIRS}")
+target_link_libraries(gfx_utils PUBLIC OpenGL::GL)
+target_link_libraries(gfx_utils PUBLIC OpenGL::GLU)
+
+# Use GLEW
+target_include_directories(gfx_utils PUBLIC "${GLEW_INCLUDE_DIRS}")
+target_link_libraries(gfx_utils PUBLIC 
+    "${GLEW_STATIC_LIBRARIES}/glew32.lib")
+# TODO(colintan): Find a more graceful way to do this - maybe create a function
+# that does what's needed to get GLEW working
+add_custom_command(TARGET gfx_utils POST_BUILD COMMAND ${CMAKE_COMMAND}
+    -E copy "${GLEW_SHARED_LIBRARIES}/glew32.dll" 
+    "${CMAKE_CURRENT_BINARY_DIR}")
+
+# Use GLFW
+target_include_directories(gfx_utils PUBLIC "${GLFW_INCLUDE_DIRS}")
+target_link_libraries(gfx_utils PUBLIC 
+    "${GLFW_STATIC_LIBRARIES}/glfw3.lib")
