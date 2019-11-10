@@ -20,12 +20,27 @@ const int kWindowWidth = 1024;
 const int kWindowHeight = 768;
 const char *kWindowTitle = "Hello Window";
 
-Window::Window() : is_initialized_(false) {}
+bool Window::has_instance_ = false;
+Window *Window::instance_ptr_ = nullptr;
+
+Window::Window() : is_initialized_(false) {
+  assert(!has_instance_);
+  assert(instance_ptr_ == nullptr);
+  has_instance_ = true;
+  instance_ptr_ = this;
+}
 
 Window::~Window() {
   if (is_initialized_) {
     glfwTerminate();
   }
+
+  instance_ptr_ = nullptr;
+  has_instance_ = false;
+}
+
+void TestAction() {
+  std::cout << "Action!" << std::endl;
 }
 
 bool Window::Inititalize() {
@@ -66,6 +81,15 @@ bool Window::Inititalize() {
               glm::rotate(glm::mat4(1.f), (static_cast<float>(kPi)/ 8.f),
                           glm::vec3(1.f, 0.f, 0.f));
 
+  glfwSetKeyCallback(glfw_window_, KeyboardInputCallback);
+  glfwSetCursorPosCallback(glfw_window_, MouseInputCallback);
+
+  KeyActionInfo action_info;
+  action_info.type = KEY_ACTION_HOLD;
+  action_info.func = TestAction;
+
+  key_action_map_[GLFW_KEY_E] = action_info;
+
   return true;
 }
 
@@ -78,7 +102,7 @@ void Window::SwapBuffers() {
 void Window::TickMainLoop() {
   glfwPollEvents();
 
-  HandleKeyboardInput();
+  TriggerKeyActions();
 }
 
 bool Window::ShouldQuit() {
@@ -91,16 +115,37 @@ glm::mat4 Window::GetViewMatrix() {
   return view_mat_;
 }
 
-void Window::HandleKeyboardInput() {
-  // TODO: remove after testing
-  if (glfwGetKey(glfw_window_, GLFW_KEY_A) == GLFW_PRESS) {
-    view_mat_ = glm::rotate(view_mat_, (static_cast<float>(kPi)/ 60.f),
-                            glm::vec3(0.f, 1.f, 0.f));
+void Window::TriggerKeyActions() {
+  for (auto &it : key_action_map_) {
+    if (it.second.status) {
+      it.second.func();
+      if (it.second.type == KEY_ACTION_PRESS) {
+        it.second.status = false;
+      }
+    }
   }
-  if (glfwGetKey(glfw_window_, GLFW_KEY_D) == GLFW_PRESS) {
-    view_mat_ = glm::rotate(view_mat_, -(static_cast<float>(kPi) / 60.f),
-                            glm::vec3(0.f, 1.f, 0.f));
+}
+
+void Window::HandleKeyEvent(int key, KeyEventType event) {
+  if (event == KEY_EVENT_DOWN || event == KEY_EVENT_UP) {
+    bool status = (event == KEY_EVENT_DOWN) ? true : false;
+
+    auto press_it = key_action_map_.find(key);
+    if (press_it != key_action_map_.end()) {
+      press_it->second.status = status;
+    }
   }
+}
+
+void Window::KeyboardInputCallback(GLFWwindow* window, int key, int scancode, 
+                                  int action, int mods) {
+  if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+    KeyEventType event = (action == GLFW_PRESS) ? KEY_EVENT_DOWN : KEY_EVENT_UP;
+    instance_ptr_->HandleKeyEvent(key, event);
+  }
+}
+
+void Window::MouseInputCallback(GLFWwindow *window, double xpos, double ypos) {
 }
 
 }
