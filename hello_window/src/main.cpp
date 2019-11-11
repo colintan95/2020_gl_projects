@@ -13,6 +13,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "gfx_utils/window/window.h"
+#include "gfx_utils/window/camera.h"
 #include "gfx_utils/shader.h"
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/texture.h"
@@ -29,6 +30,13 @@ int main(int argc, char *argv[]) {
 
   if (!window.Inititalize()) {
     std::cerr << "Failed to initialize gfx window" << std::endl;
+    exit(1);
+  }
+
+  gfx_utils::Camera camera;
+
+  if (!camera.Initialize(&window)) {
+    std::cerr << "Failed to initialize camera" << std::endl;
     exit(1);
   }
   
@@ -195,7 +203,7 @@ int main(int argc, char *argv[]) {
       glm::translate(glm::mat4(1.f), glm::vec3(0.f, -7.5f, 0.f)) *
       glm::rotate(glm::mat4(1.f), -(static_cast<float>(kPi)/2.f),
                   glm::vec3(1.f, 0.f, 0.f));
-    glm::mat4 view_mat = window.CalcViewMatrix();
+    glm::mat4 view_mat = camera.CalcViewMatrix();
     glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
                                         0.1f, 100.f);
     glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;

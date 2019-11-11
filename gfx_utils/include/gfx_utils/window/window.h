@@ -14,6 +14,16 @@
 
 namespace gfx_utils {
 
+enum KeyEventType {
+  KEY_EVENT_DOWN,
+  KEY_EVENT_UP
+};
+
+enum KeyActionType {
+  KEY_ACTION_PRESS,
+  KEY_ACTION_HOLD
+};
+
 // There should only be a single Window class in the application
 class Window {
 
@@ -29,49 +39,17 @@ public:
 
   bool ShouldQuit();
 
-  glm::mat4 CalcViewMatrix();
+  void RegisterKeyBinding(int key, KeyActionType action, 
+                          std::function<void()> func);
 
 private:
-  enum KeyEventType {
-    KEY_EVENT_DOWN,
-    KEY_EVENT_UP
-  };
-
-  enum KeyActionType {
-    KEY_ACTION_PRESS,
-    KEY_ACTION_HOLD
-  };
-
   struct KeyActionInfo {
     bool status = false;
     KeyActionType type ; // Press or Hold
     std::function<void()> func;
   };
 
-  enum CameraAction {
-    CAMERA_ROTATE_LEFT,
-    CAMERA_ROTATE_RIGHT,
-    CAMERA_ROTATE_UP,
-    CAMERA_ROTATE_DOWN,
-    CAMERA_PAN_LEFT,
-    CAMERA_PAN_RIGHT,
-    CAMERA_PAN_UP,
-    CAMERA_PAN_DOWN
-  };
-
-  enum CameraMode {
-    CAMERA_PAN_MODE,
-    CAMERA_ROTATE_MODE
-  };
-
 private:
-  void PanCamera(CameraAction action);
-  void RotateCamera(CameraAction action);
-  void ToggleCameraMode();
-
-  void SetCameraPanMode();
-  void SetCameraRotateMode();
-
   void TriggerKeyActions();
 
   void HandleKeyEvent(int key, KeyEventType event);
@@ -86,13 +64,6 @@ private:
   GLFWwindow *glfw_window_;
 
   bool is_initialized_;
-
-  // Camera-related variables
-  glm::vec3 camera_loc_;
-  float camera_yaw_;
-  float camera_pitch_;
-  float camera_roll_;
-  CameraMode camera_mode_;
 
   std::unordered_map<int, KeyActionInfo> key_action_map_;
 
