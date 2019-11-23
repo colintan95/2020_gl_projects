@@ -31,16 +31,19 @@ private:
 
   enum CameraMode {
     CAMERA_PAN_MODE,
-    CAMERA_ROTATE_MODE
+    CAMERA_ROTATE_MODE,
+    CAMERA_FPS_MODE
   };
 
 private:
+  void MouseMoveCallback(double x, double y);
+
   void PanCamera(CameraAction action);
   void RotateCamera(CameraAction action);
-  void ToggleCameraMode();
 
-  void SetCameraPanMode();
-  void SetCameraRotateMode();
+  void SetCameraMode(CameraMode mode);
+
+  void ResetCameraMode();
 
 private:
   Window *window_;
@@ -50,6 +53,9 @@ private:
   float camera_pitch_;
   float camera_roll_;
   CameraMode camera_mode_;
+
+  double prev_mouse_x_;
+  double prev_mouse_y_;
 
 private:
   friend class Window;

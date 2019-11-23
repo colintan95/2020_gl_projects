@@ -24,8 +24,16 @@ enum KeyActionType {
   KEY_ACTION_HOLD
 };
 
+struct MouseCursorLoc {
+  double x = 0.0;
+  double y = 0.0;
+};
+
 // There should only be a single Window class in the application
 class Window {
+
+public:
+  using MouseMoveFunc = std::function<void(double,double)>;
 
 public:
   Window();
@@ -41,6 +49,10 @@ public:
 
   void RegisterKeyBinding(int key, KeyActionType action, 
                           std::function<void()> func);
+  void RemoveKeyBinding(int key);
+
+  void RegisterMouseMoveBinding(void *receiver, MouseMoveFunc func);
+  void RemoveMouseMoveBinding(void *receiver);
 
 private:
   struct KeyActionInfo {
@@ -52,13 +64,16 @@ private:
 private:
   void TriggerKeyActions();
 
+  void TriggerMouseMoveReceivers();
+
   void HandleKeyEvent(int key, KeyEventType event);
+  void HandleMouseEvent(double x, double y);
 
   // GLFW input callbacks - can only be static since GLFW can't register
   // a member function as a callback
   static void KeyboardInputCallback(GLFWwindow *window, int key, int scancode, 
                                     int action, int mods);
-  static void MouseInputCallback(GLFWwindow *window, double xpos, double ypos);
+  static void MouseInputCallback(GLFWwindow *window, double x, double y);
 
 private:
   GLFWwindow *glfw_window_;
@@ -66,6 +81,10 @@ private:
   bool is_initialized_;
 
   std::unordered_map<int, KeyActionInfo> key_action_map_;
+
+  std::unordered_map<void*, MouseMoveFunc> mouse_move_receivers_;
+
+  MouseCursorLoc mouse_cursor_loc_;
 
   // Used to ensure that there's only a single instance of the class
   static bool has_instance_;

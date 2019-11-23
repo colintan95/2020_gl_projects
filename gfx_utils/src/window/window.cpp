@@ -82,6 +82,8 @@ void Window::TickMainLoop() {
   glfwPollEvents();
 
   TriggerKeyActions();
+
+  TriggerMouseMoveReceivers();
 }
 
 bool Window::ShouldQuit() {
@@ -98,6 +100,10 @@ void Window::RegisterKeyBinding(int key, KeyActionType action,
   key_action_map_[key] = action_info;
 }
 
+void Window::RemoveKeyBinding(int key) {
+  key_action_map_.erase(key);
+}
+
 void Window::TriggerKeyActions() {
   for (auto &it : key_action_map_) {
     if (it.second.status) {
@@ -107,6 +113,26 @@ void Window::TriggerKeyActions() {
         it.second.status = false;
       }
     }
+  }
+}
+
+void Window::TriggerMouseMoveReceivers() {
+  for (auto it = mouse_move_receivers_.begin(); 
+       it != mouse_move_receivers_.end(); ++it) {
+    it->second(mouse_cursor_loc_.x, mouse_cursor_loc_.y);
+  }
+}
+
+void Window::RegisterMouseMoveBinding(void *receiver, MouseMoveFunc func) {
+  if (mouse_move_receivers_.find(receiver) == mouse_move_receivers_.end()) {
+    mouse_move_receivers_[receiver] = func;
+  }
+}
+
+void Window::RemoveMouseMoveBinding(void *receiver) {
+  auto it = mouse_move_receivers_.find(receiver);
+  if (it != mouse_move_receivers_.end()) {
+    mouse_move_receivers_.erase(it);
   }
 }
 
@@ -121,6 +147,11 @@ void Window::HandleKeyEvent(int key, KeyEventType event) {
   }
 }
 
+void Window::HandleMouseEvent(double x, double y) {
+  mouse_cursor_loc_.x = x;
+  mouse_cursor_loc_.y = y;
+}
+
 void Window::KeyboardInputCallback(GLFWwindow* window, int key, int scancode, 
                                   int action, int mods) {
   if (action == GLFW_PRESS || action == GLFW_RELEASE) {
@@ -129,7 +160,8 @@ void Window::KeyboardInputCallback(GLFWwindow* window, int key, int scancode,
   }
 }
 
-void Window::MouseInputCallback(GLFWwindow *window, double xpos, double ypos) {
+void Window::MouseInputCallback(GLFWwindow *window, double x, double y) {
+  instance_ptr_->HandleMouseEvent(x, y);
 }
 
 } // namespace gfx_utils
