@@ -39,10 +39,6 @@ bool Camera::Initialize(Window *window) {
 
   window_ = window;
 
-  // TODO: remove this
-  camera_loc_ = glm::vec3(0.f, 20.f, 60.f);
-  camera_pitch_ = -(static_cast<float>(kPi) / 8.f);
-
   SetCameraMode(CAMERA_PAN_MODE);
 
   window_->RegisterKeyBinding(GLFW_KEY_Z, KEY_ACTION_PRESS, [this]() {
@@ -60,14 +56,6 @@ bool Camera::Initialize(Window *window) {
 
 glm::mat4 Camera::CalcViewMatrix() {
   glm::mat4 view_mat = glm::mat4(1.f);
-  
-  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_roll_, 
-  //                         glm::vec3(0.f, 0.f, 1.f));
-  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_pitch_, 
-  //                         glm::vec3(1.f, 0.f, 0.f));
-  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_yaw_,
-  //                         glm::vec3(0.f, 1.f, 0.f));
-  // view_mat *= glm::translate(glm::mat4(1.f), -camera_loc_);
 
   view_mat = glm::rotate(glm::mat4(1.f), -camera_roll_, 
                          glm::vec3(0.f, 0.f, 1.f)) *
@@ -138,6 +126,8 @@ void Camera::FpsMoveCamera(CameraAction action) {
   float walk_speed = 0.8f;
   float strafe_speed = 0.5f;
 
+  std::cout << "Yaw: " << camera_yaw_ << ", Pitch: " << camera_pitch_ << std::endl;
+
   switch (action) {
   case CAMERA_FPS_LEFT:
     camera_loc_ += 
@@ -158,6 +148,12 @@ void Camera::FpsMoveCamera(CameraAction action) {
                   glm::rotate(glm::mat4(1.f), camera_yaw_,
                               glm::vec3(0.f, 1.f, 0.f)) *
                   glm::vec4(0.f, 0.f, -walk_speed, 0.f));
+    glm::vec3 vec = glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
+                              glm::vec3(1.f, 0.f, 0.f)) *
+                  glm::rotate(glm::mat4(1.f), camera_yaw_,
+                              glm::vec3(0.f, 1.f, 0.f)) *
+                  glm::vec4(0.f, 0.f, -walk_speed, 0.f));
+    std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl;
     break;
   case CAMERA_FPS_BACKWARD:
     camera_loc_ += 

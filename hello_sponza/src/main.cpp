@@ -14,6 +14,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "gfx_utils/window/window.h"
+#include "gfx_utils/window/camera.h"
 #include "gfx_utils/shader.h"
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/texture.h"
@@ -26,40 +28,19 @@ static const std::string frag_shader_path = "shaders/mesh.frag";
 
 int main(int argc, char *argv[]) {
 
-  // TODO(colintan): Check if we need glewExperimental to be true
-  if (!glfwInit()) {
-    std::cerr << "Failed to initialize GLFW" << std::endl;
+  gfx_utils::Window window;
+
+  if (!window.Inititalize()) {
+    std::cerr << "Failed to initialize gfx window" << std::endl;
     exit(1);
   }
 
-  std::cout << "GLFW initialized" << std::endl;
+  gfx_utils::Camera camera;
 
-  glfwWindowHint(GLFW_SAMPLES, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-  // TODO(colintan): Check if we really need this
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-  GLFWwindow *window;
-  window = glfwCreateWindow(1024, 768, "Hello Sponza", nullptr, nullptr);
-
-  if (window == nullptr) {
-    std::cerr << "Failed to create GLFW window" << std::endl;
+  if (!camera.Initialize(&window)) {
+    std::cerr << "Failed to initialize camera" << std::endl;
     exit(1);
   }
-
-  glfwMakeContextCurrent(window);
-
-  // TODO(colintan): Is glewExperimental needed?
-  glewExperimental = true;
-  if (glewInit() != GLEW_OK) {
-    std::cerr << "Failed to initialize GLEW" << std::endl;
-    exit(1);
-  }
-
-  std::cout << "GLEW initialized" << std::endl;
 
   std::vector<gfx_utils::Mesh> meshes;
   if (!gfx_utils::CreateMeshesFromFile(&meshes, "assets/models/sponza.obj")) {
@@ -175,21 +156,6 @@ int main(int argc, char *argv[]) {
   glDeleteShader(vert_shader_id);
 
   glUseProgram(program_id);
-  glm::mat4 model_mat = glm::mat4(1.f);
-  glm::mat4 view_mat = 
-    glm::translate(glm::mat4(1.f), glm::vec3(-100.f, -100.f, 0.f)) *
-    glm::rotate(glm::mat4(1.f), (static_cast<float>(kPi) / 2.f),
-        glm::vec3(0.f, 1.f, 0.f));
-  //glm::mat4 view_mat =
-  //  glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -60.f)) *
-  //  glm::rotate(glm::mat4(1.f), (static_cast<float>(kPi) / 8.f),
-  //    glm::vec3(1.f, 0.f, 0.f));
-  glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
-                                        0.1f, 10000.f);
-  glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
-
-  GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");
-  glUniformMatrix4fv(mvp_mat_loc, 1, GL_FALSE, glm::value_ptr(mvp_mat));
 
   std::unordered_map<std::string, GLuint> texture_id_map;
 
@@ -280,6 +246,15 @@ int main(int argc, char *argv[]) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    glm::mat4 model_mat = glm::mat4(1.f);
+    glm::mat4 view_mat = camera.CalcViewMatrix();
+    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
+                                          0.1f, 10000.f);
+    glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
+
+    GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");
+    glUniformMatrix4fv(mvp_mat_loc, 1, GL_FALSE, glm::value_ptr(mvp_mat));
+
     for (size_t i = 0; i < meshes.size(); ++i) {
       // Set the materials data in the fragment shader
 
@@ -333,10 +308,10 @@ int main(int argc, char *argv[]) {
 
     glBindVertexArray(0);
 
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+    window.SwapBuffers();
+    window.TickMainLoop();
 
-    if (glfwWindowShouldClose(window) == 1) {
+    if (window.ShouldQuit()) {
       should_quit = true;
     }
   }
