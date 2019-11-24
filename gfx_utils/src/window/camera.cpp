@@ -61,14 +61,22 @@ bool Camera::Initialize(Window *window) {
 glm::mat4 Camera::CalcViewMatrix() {
   glm::mat4 view_mat = glm::mat4(1.f);
   
-  view_mat *= glm::rotate(glm::mat4(1.f), -camera_roll_, 
-                          glm::vec3(0.f, 0.f, 1.f));
-  view_mat *= glm::rotate(glm::mat4(1.f), -camera_pitch_, 
-                          glm::vec3(1.f, 0.f, 0.f));
-  view_mat *= glm::rotate(glm::mat4(1.f), -camera_yaw_,
-                          glm::vec3(0.f, 1.f, 0.f));
-  view_mat *= glm::translate(glm::mat4(1.f), -camera_loc_);
+  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_roll_, 
+  //                         glm::vec3(0.f, 0.f, 1.f));
+  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_pitch_, 
+  //                         glm::vec3(1.f, 0.f, 0.f));
+  // view_mat *= glm::rotate(glm::mat4(1.f), -camera_yaw_,
+  //                         glm::vec3(0.f, 1.f, 0.f));
+  // view_mat *= glm::translate(glm::mat4(1.f), -camera_loc_);
 
+  view_mat = glm::rotate(glm::mat4(1.f), -camera_roll_, 
+                         glm::vec3(0.f, 0.f, 1.f)) *
+             glm::rotate(glm::mat4(1.f), -camera_pitch_, 
+                        glm::vec3(1.f, 0.f, 0.f)) *
+             glm::rotate(glm::mat4(1.f), -camera_yaw_,
+                         glm::vec3(0.f, 1.f, 0.f)) *
+             glm::translate(glm::mat4(1.f), -camera_loc_);
+ 
   return view_mat;
 }
 
@@ -76,20 +84,20 @@ void Camera::PanCamera(CameraAction action) {
   assert(action == CAMERA_PAN_LEFT || action == CAMERA_PAN_RIGHT ||
          action == CAMERA_PAN_UP   || action == CAMERA_PAN_DOWN);
 
-  float d = 1.f;
+  float d = 0.5f;
 
   switch (action) {
   case CAMERA_PAN_LEFT:
     camera_loc_ += 
         glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
                               glm::vec3(0.f, 1.f, 0.f)) * 
-                              glm::vec4(-d, 0.f, 0.f, 0.f));
+                  glm::vec4(-d, 0.f, 0.f, 0.f));
     break;
   case CAMERA_PAN_RIGHT:
     camera_loc_ +=
         glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
                               glm::vec3(0.f, 1.f, 0.f)) * 
-                              glm::vec4(d, 0.f, 0.f, 0.f));
+                  glm::vec4(d, 0.f, 0.f, 0.f));
     break;
   case CAMERA_PAN_UP:
     camera_loc_ += glm::vec3(0.f, d, 0.f);
@@ -123,6 +131,45 @@ void Camera::RotateCamera(CameraAction action) {
   }
 }
 
+void Camera::FpsMoveCamera(CameraAction action) {
+  assert(action == CAMERA_FPS_LEFT    || action == CAMERA_FPS_RIGHT ||
+         action == CAMERA_FPS_FORWARD || action == CAMERA_FPS_BACKWARD);
+
+  float walk_speed = 0.8f;
+  float strafe_speed = 0.5f;
+
+  switch (action) {
+  case CAMERA_FPS_LEFT:
+    camera_loc_ += 
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
+                              glm::vec3(0.f, 1.f, 0.f)) *
+                  glm::vec4(-strafe_speed, 0.f, 0.f, 0.f));
+    break;
+  case CAMERA_FPS_RIGHT:
+    camera_loc_ +=
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
+                              glm::vec3(0.f, 1.f, 0.f)) * 
+                  glm::vec4(strafe_speed, 0.f, 0.f, 0.f));
+    break;
+  case CAMERA_FPS_FORWARD:
+    camera_loc_ += 
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
+                              glm::vec3(1.f, 0.f, 0.f)) *
+                  glm::rotate(glm::mat4(1.f), camera_yaw_,
+                              glm::vec3(0.f, 1.f, 0.f)) *
+                  glm::vec4(0.f, 0.f, -walk_speed, 0.f));
+    break;
+  case CAMERA_FPS_BACKWARD:
+    camera_loc_ += 
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
+                              glm::vec3(1.f, 0.f, 0.f)) *
+                  glm::rotate(glm::mat4(1.f), camera_yaw_,
+                            glm::vec3(0.f, 1.f, 0.f)) *
+                  glm::vec4(0.f, 0.f, walk_speed, 0.f));
+    break;
+  }
+}
+
 void Camera::SetCameraMode(CameraMode mode) {
   ResetCameraMode();
 
@@ -131,9 +178,8 @@ void Camera::SetCameraMode(CameraMode mode) {
 
     std::array<std::pair<int, CameraAction>, 4> key_bindings =
         {{ {GLFW_KEY_A, CAMERA_PAN_LEFT}, {GLFW_KEY_D, CAMERA_PAN_RIGHT},
-          {GLFW_KEY_W, CAMERA_PAN_UP},   {GLFW_KEY_S, CAMERA_PAN_DOWN} }};
+           {GLFW_KEY_W, CAMERA_PAN_UP},   {GLFW_KEY_S, CAMERA_PAN_DOWN} }};
 
-    // Registers the keyboard keys to the associated action
     for (auto it : key_bindings) {
       window_->RegisterKeyBinding(it.first, KEY_ACTION_HOLD, [=]() {
         this->PanCamera(it.second);
@@ -144,10 +190,11 @@ void Camera::SetCameraMode(CameraMode mode) {
     camera_mode_ = CAMERA_ROTATE_MODE;
 
     std::array<std::pair<int, CameraAction>, 4> key_bindings =
-        {{ {GLFW_KEY_A, CAMERA_ROTATE_LEFT}, {GLFW_KEY_D, CAMERA_ROTATE_RIGHT},
-          {GLFW_KEY_W, CAMERA_ROTATE_UP},   {GLFW_KEY_S, CAMERA_ROTATE_DOWN} }};
+        {{ {GLFW_KEY_A, CAMERA_ROTATE_LEFT}, 
+           {GLFW_KEY_D, CAMERA_ROTATE_RIGHT},
+           {GLFW_KEY_W, CAMERA_ROTATE_UP},   
+           {GLFW_KEY_S, CAMERA_ROTATE_DOWN} }};
 
-    // Registers the keyboard keys to the associated action
     for (auto it : key_bindings) {
       window_->RegisterKeyBinding(it.first, KEY_ACTION_HOLD, [=]() {
         this->RotateCamera(it.second);
@@ -156,6 +203,18 @@ void Camera::SetCameraMode(CameraMode mode) {
   }
   else if (mode == CAMERA_FPS_MODE) {
     camera_mode_ = CAMERA_FPS_MODE;
+
+    std::array<std::pair<int, CameraAction>, 4> key_bindings =
+        {{ {GLFW_KEY_A, CAMERA_FPS_LEFT}, 
+           {GLFW_KEY_D, CAMERA_FPS_RIGHT},
+           {GLFW_KEY_W, CAMERA_FPS_FORWARD}, 
+           {GLFW_KEY_S, CAMERA_FPS_BACKWARD} }};
+
+    for (auto it : key_bindings) {
+      window_->RegisterKeyBinding(it.first, KEY_ACTION_HOLD, [=]() {
+        this->FpsMoveCamera(it.second);
+      });
+    }  
 
     window_->RegisterMouseMoveBinding(static_cast<void*>(this), 
         [=](double x, double y) {

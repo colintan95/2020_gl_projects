@@ -26,7 +26,11 @@ private:
     CAMERA_PAN_LEFT,
     CAMERA_PAN_RIGHT,
     CAMERA_PAN_UP,
-    CAMERA_PAN_DOWN
+    CAMERA_PAN_DOWN,
+    CAMERA_FPS_FORWARD,
+    CAMERA_FPS_BACKWARD,
+    CAMERA_FPS_LEFT,
+    CAMERA_FPS_RIGHT
   };
 
   enum CameraMode {
@@ -40,6 +44,7 @@ private:
 
   void PanCamera(CameraAction action);
   void RotateCamera(CameraAction action);
+  void FpsMoveCamera(CameraAction action);
 
   void SetCameraMode(CameraMode mode);
 
