@@ -8,6 +8,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 // TODO(colintan): remove
 #include <iostream>
@@ -79,7 +80,7 @@ void Camera::PanCamera(CameraAction action) {
     camera_loc_ += 
         glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
                               glm::vec3(0.f, 1.f, 0.f)) * 
-                  glm::vec4(-d, 0.f, 0.f, 0.f));
+                  glm::vec4(-d, 0.f, 0.f, 0.f));                       
     break;
   case CAMERA_PAN_RIGHT:
     camera_loc_ +=
@@ -126,8 +127,6 @@ void Camera::FpsMoveCamera(CameraAction action) {
   float walk_speed = 0.8f;
   float strafe_speed = 0.5f;
 
-  std::cout << "Yaw: " << camera_yaw_ << ", Pitch: " << camera_pitch_ << std::endl;
-
   switch (action) {
   case CAMERA_FPS_LEFT:
     camera_loc_ += 
@@ -143,24 +142,18 @@ void Camera::FpsMoveCamera(CameraAction action) {
     break;
   case CAMERA_FPS_FORWARD:
     camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
-                              glm::vec3(1.f, 0.f, 0.f)) *
-                  glm::rotate(glm::mat4(1.f), camera_yaw_,
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
                               glm::vec3(0.f, 1.f, 0.f)) *
-                  glm::vec4(0.f, 0.f, -walk_speed, 0.f));
-    glm::vec3 vec = glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
+                  glm::rotate(glm::mat4(1.f), camera_pitch_,
                               glm::vec3(1.f, 0.f, 0.f)) *
-                  glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) *
                   glm::vec4(0.f, 0.f, -walk_speed, 0.f));
-    std::cout << vec.x << " " << vec.y << " " << vec.z << std::endl;
     break;
   case CAMERA_FPS_BACKWARD:
     camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_pitch_,
-                              glm::vec3(1.f, 0.f, 0.f)) *
-                  glm::rotate(glm::mat4(1.f), camera_yaw_,
+        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
                             glm::vec3(0.f, 1.f, 0.f)) *
+                  glm::rotate(glm::mat4(1.f), camera_pitch_,
+                              glm::vec3(1.f, 0.f, 0.f)) *
                   glm::vec4(0.f, 0.f, walk_speed, 0.f));
     break;
   }
