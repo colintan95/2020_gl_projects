@@ -8,7 +8,6 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/string_cast.hpp>
 
 // TODO(colintan): remove
 #include <iostream>
@@ -23,9 +22,7 @@ namespace gfx_utils {
 
 Camera::Camera() : window_(nullptr),
                    camera_loc_(0.f, 0.f, 0.f), 
-                   camera_yaw_(0.f),
-                   camera_pitch_(0.f),
-                   camera_roll_(0.f),
+                   camera_rotation_(1.f, 0.f, 0.f, 0.f),
                    camera_mode_(CAMERA_PAN_MODE),
                    prev_mouse_x_(kMouseLocNoValue),
                    prev_mouse_y_(kMouseLocNoValue) {
@@ -58,12 +55,8 @@ bool Camera::Initialize(Window *window) {
 glm::mat4 Camera::CalcViewMatrix() {
   glm::mat4 view_mat = glm::mat4(1.f);
 
-  view_mat = glm::rotate(glm::mat4(1.f), -camera_roll_, 
-                         glm::vec3(0.f, 0.f, 1.f)) *
-             glm::rotate(glm::mat4(1.f), -camera_pitch_, 
-                        glm::vec3(1.f, 0.f, 0.f)) *
-             glm::rotate(glm::mat4(1.f), -camera_yaw_,
-                         glm::vec3(0.f, 1.f, 0.f)) *
+  // TODO(colintan): Is the inverse operation expensive?
+  view_mat = glm::inverse(glm::mat4_cast(camera_rotation_)) *
              glm::translate(glm::mat4(1.f), -camera_loc_);
  
   return view_mat;
@@ -77,22 +70,16 @@ void Camera::PanCamera(CameraAction action) {
 
   switch (action) {
   case CAMERA_PAN_LEFT:
-    camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) * 
-                  glm::vec4(-d, 0.f, 0.f, 0.f));                       
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(-d, 0.f, 0.f));                 
     break;
   case CAMERA_PAN_RIGHT:
-    camera_loc_ +=
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) * 
-                  glm::vec4(d, 0.f, 0.f, 0.f));
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(d, 0.f, 0.f));
     break;
   case CAMERA_PAN_UP:
-    camera_loc_ += glm::vec3(0.f, d, 0.f);
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(0.f, d, 0.f));
     break;
   case CAMERA_PAN_DOWN:
-    camera_loc_ += glm::vec3(0.f, -d, 0.f);
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(0.f, -d, 0.f));
     break;
   }
 }
@@ -103,19 +90,18 @@ void Camera::RotateCamera(CameraAction action) {
 
   float d = static_cast<float>(kPi) / 120.f;
 
-  // TODO: create an angle type to handle angle wrapping
   switch (action) {
   case CAMERA_ROTATE_LEFT:
-    camera_yaw_ += d;
+    RotateYaw(d);
     break;
   case CAMERA_ROTATE_RIGHT:
-    camera_yaw_ -= d;  
+    RotateYaw(-d);
     break;
   case CAMERA_ROTATE_UP:
-    camera_pitch_ += d;
+    RotatePitch(d);
     break;
   case CAMERA_ROTATE_DOWN:
-    camera_pitch_ -= d;
+    RotatePitch(-d);
     break;
   }
 }
@@ -129,32 +115,16 @@ void Camera::FpsMoveCamera(CameraAction action) {
 
   switch (action) {
   case CAMERA_FPS_LEFT:
-    camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) *
-                  glm::vec4(-strafe_speed, 0.f, 0.f, 0.f));
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(-strafe_speed, 0.f, 0.f));
     break;
   case CAMERA_FPS_RIGHT:
-    camera_loc_ +=
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) * 
-                  glm::vec4(strafe_speed, 0.f, 0.f, 0.f));
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(strafe_speed, 0.f, 0.f));
     break;
   case CAMERA_FPS_FORWARD:
-    camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                              glm::vec3(0.f, 1.f, 0.f)) *
-                  glm::rotate(glm::mat4(1.f), camera_pitch_,
-                              glm::vec3(1.f, 0.f, 0.f)) *
-                  glm::vec4(0.f, 0.f, -walk_speed, 0.f));
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(0.f, 0.f, -walk_speed));
     break;
   case CAMERA_FPS_BACKWARD:
-    camera_loc_ += 
-        glm::vec3(glm::rotate(glm::mat4(1.f), camera_yaw_,
-                            glm::vec3(0.f, 1.f, 0.f)) *
-                  glm::rotate(glm::mat4(1.f), camera_pitch_,
-                              glm::vec3(1.f, 0.f, 0.f)) *
-                  glm::vec4(0.f, 0.f, walk_speed, 0.f));
+    camera_loc_ += LocalToGlobalTransform(glm::vec3(0.f, 0.f, walk_speed));
     break;
   }
 }
@@ -214,8 +184,11 @@ void Camera::SetCameraMode(CameraMode mode) {
 
 void Camera::MouseMoveCallback(double x, double y) {
   if (prev_mouse_x_ != kMouseLocNoValue && prev_mouse_y_ != kMouseLocNoValue) {
-    camera_yaw_   += -static_cast<float>(x - prev_mouse_x_) * kFpsModeLookSpeed;
-    camera_pitch_ += -static_cast<float>(y - prev_mouse_y_) * kFpsModeLookSpeed;
+    float yaw_d = -static_cast<float>(x - prev_mouse_x_) * kFpsModeLookSpeed;
+    float pitch_d = -static_cast<float>(y - prev_mouse_y_) * kFpsModeLookSpeed;
+
+    RotateYaw(yaw_d);
+    RotatePitch(pitch_d);
   }
 
   prev_mouse_x_ = x;
@@ -233,6 +206,23 @@ void Camera::ResetCameraMode() {
 
   prev_mouse_x_ = kMouseLocNoValue;
   prev_mouse_y_ = kMouseLocNoValue;
+}
+
+void Camera::RotateYaw(float angle_change) {
+  // Yaw rotation is relative to the world coordinates
+  camera_rotation_ = glm::rotate(glm::quat(1.f, 0.f, 0.f, 0.f), angle_change,
+                                 glm::vec3(0.f, 1.f, 0.f)) *
+                     camera_rotation_;
+}
+
+void Camera::RotatePitch(float angle_change) {
+  // Pitch rotation relative to the local coordinates of the camera
+  camera_rotation_ = glm::rotate(camera_rotation_, angle_change,
+                                 glm::vec3(1.f, 0.f, 0.f));
+}
+
+glm::vec3 Camera::LocalToGlobalTransform(glm::vec3 vec_local) {
+  return glm::mat3_cast(camera_rotation_) * vec_local;
 }
 
 } // namespace gfx_utils

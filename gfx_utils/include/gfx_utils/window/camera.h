@@ -2,6 +2,7 @@
 #define GFX_UTILS_WINDOW_CAMERA_H_
 
 #include <glm/matrix.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace gfx_utils {
 
@@ -50,13 +51,25 @@ private:
 
   void ResetCameraMode();
 
+  // TODO(colintan): Consider changing this to RotateLocalAxes() and
+  // RotateGlobalAxes() where these functions takes as params the axis (x,y,z) 
+  // to rotate about and the angle change
+  // May be needed if, for example, we may want to rotate about the y-axis
+  // (yaw) at times by the global axes and at times by the local axes, not
+  // just always one of them
+  void RotateYaw(float angle_change);
+  void RotatePitch(float angle_change);
+
+  // Converts a vector from the local (camera) transform to a vector in the 
+  // global transform
+  glm::vec3 LocalToGlobalTransform(glm::vec3 vec_local);
+
 private:
   Window *window_;
 
+  glm::quat camera_rotation_;
+
   glm::vec3 camera_loc_;
-  float camera_yaw_;
-  float camera_pitch_;
-  float camera_roll_;
   CameraMode camera_mode_;
 
   double prev_mouse_x_;
