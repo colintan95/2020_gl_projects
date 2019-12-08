@@ -62,6 +62,10 @@ glm::mat4 Camera::CalcViewMatrix() {
   return view_mat;
 }
 
+glm::vec3 Camera::GetCameraLocation() {
+  return camera_loc_;
+}
+
 void Camera::PanCamera(CameraAction action) {
   assert(action == CAMERA_PAN_LEFT || action == CAMERA_PAN_RIGHT ||
          action == CAMERA_PAN_UP   || action == CAMERA_PAN_DOWN);

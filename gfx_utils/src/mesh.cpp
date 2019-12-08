@@ -213,4 +213,18 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
 //  return true;
 //}
 
+void ClearMesh(Mesh *mesh) {
+  mesh->pos_data.clear();
+  mesh->normal_data.clear();
+  mesh->texcoord_data.clear();
+
+  mesh->index_data.clear();
+
+  mesh->mtl_id_data.clear();
+
+  mesh->num_verts = 0;
+
+  mesh->material_list;
+}
+
 }

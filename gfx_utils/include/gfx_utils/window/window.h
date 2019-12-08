@@ -9,6 +9,7 @@
 
 #include <glm/matrix.hpp>
 
+#include <string>
 #include <functional>
 #include <unordered_map>
 
@@ -39,13 +40,16 @@ public:
   Window();
   ~Window();
 
-  bool Inititalize();
+  bool Inititalize(int window_width, int window_height,
+                   const std::string& window_name);
 
   void SwapBuffers();
 
   void TickMainLoop();
 
   bool ShouldQuit();
+
+  float GetAspectRatio();
 
   void RegisterKeyBinding(int key, KeyActionType action, 
                           std::function<void()> func);
@@ -77,6 +81,9 @@ private:
 
 private:
   GLFWwindow *glfw_window_;
+  int window_width_;
+  int window_height_;
+  std::string window_name_;
 
   bool is_initialized_;
 

@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
   gfx_utils::Window window;
 
-  if (!window.Inititalize()) {
+  if (!window.Inititalize(1920, 1080, "Hello Sponza")) {
     std::cerr << "Failed to initialize gfx window" << std::endl;
     exit(1);
   }
@@ -71,90 +71,11 @@ int main(int argc, char *argv[]) {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
 
-  std::string vert_shader_src;
-  if (!gfx_utils::LoadShaderSource(&vert_shader_src, vert_shader_path)) {
-    std::cerr << "Failed to find vertex shader source at "
-      << vert_shader_path << std::endl;
+  GLuint program_id;
+  if (!gfx_utils::CreateProgram(&program_id, vert_shader_path, 
+                                frag_shader_path)) {
     exit(1);
   }
-
-  GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
-
-  char const *vert_shader_src_ptr = vert_shader_src.c_str();
-  glShaderSource(vert_shader_id, 1, &vert_shader_src_ptr, nullptr);
-  glCompileShader(vert_shader_id);
-
-  GLint gl_result;
-
-  // Check success of the vertex shader compilation  
-  gl_result = GL_FALSE;
-  glGetShaderiv(vert_shader_id, GL_COMPILE_STATUS, &gl_result);
-  if (gl_result == GL_FALSE) {
-    int log_length;
-    glGetShaderiv(vert_shader_id, GL_INFO_LOG_LENGTH, &log_length);
-
-    if (log_length > 0) {
-      std::vector<GLchar> error_log(log_length);
-      glGetShaderInfoLog(vert_shader_id, log_length, nullptr, &error_log[0]);
-      std::cerr << &error_log[0] << std::endl;
-    }
-
-    exit(1);
-  }
-  
-  std::string frag_shader_src;
-  if (!gfx_utils::LoadShaderSource(&frag_shader_src, frag_shader_path)) {
-    std::cerr << "Failed to find fragment shader source at: "
-      << frag_shader_path << std::endl;
-    exit(1);
-  }
-
-  GLuint frag_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
-
-  char const* frag_shader_src_ptr = frag_shader_src.c_str();
-  glShaderSource(frag_shader_id, 1, &frag_shader_src_ptr, nullptr);
-  glCompileShader(frag_shader_id);
-
-  // Check success of the fragment shader compilation 
-  gl_result = GL_FALSE;
-  glGetShaderiv(frag_shader_id, GL_COMPILE_STATUS, &gl_result);
-  if (gl_result == GL_FALSE) {
-    int log_length;
-    glGetShaderiv(frag_shader_id, GL_INFO_LOG_LENGTH, &log_length);
-
-    if (log_length > 0) {
-      std::vector<GLchar> error_log(log_length);
-      glGetShaderInfoLog(frag_shader_id, log_length, nullptr, &error_log[0]);
-      std::cerr << &error_log[0] << std::endl;
-    }
-
-    exit(1);
-  }
-
-  GLuint program_id = glCreateProgram();
-  glAttachShader(program_id, vert_shader_id);
-  glAttachShader(program_id, frag_shader_id);
-  glLinkProgram(program_id);
-
-  // Check that the program was successfully created
-  gl_result = GL_FALSE;
-  glGetProgramiv(program_id, GL_LINK_STATUS, &gl_result);
-  if (gl_result == GL_FALSE) {
-    int log_length;
-    glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
-
-    if (log_length > 0) {
-      std::vector<GLchar> error_log(log_length);
-      glGetProgramInfoLog(program_id, log_length, nullptr, &error_log[0]);
-      std::cerr << &error_log[0] << std::endl;
-    }
-
-    exit(1);
-  }
-
-  glDeleteShader(frag_shader_id);
-  glDeleteShader(vert_shader_id);
-
   glUseProgram(program_id);
 
   std::unordered_map<std::string, GLuint> texture_id_map;
@@ -248,7 +169,8 @@ int main(int argc, char *argv[]) {
 
     glm::mat4 model_mat = glm::mat4(1.f);
     glm::mat4 view_mat = camera.CalcViewMatrix();
-    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
+    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 
+                                          window.GetAspectRatio(),
                                           0.1f, 10000.f);
     glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
 

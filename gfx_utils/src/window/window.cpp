@@ -33,7 +33,8 @@ Window::~Window() {
   has_instance_ = false;
 }
 
-bool Window::Inititalize() {
+bool Window::Inititalize(int window_width, int window_height,
+                         const std::string& window_name) {
   if (!glfwInit()) {
     std::cerr << "Failed to initialize GLFW" << std::endl;
     return false;
@@ -47,7 +48,12 @@ bool Window::Inititalize() {
   // TODO(colintan): Check if we really need this
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-  glfw_window_ = glfwCreateWindow(kWindowWidth, kWindowHeight, kWindowTitle,
+  window_width_ = window_width;
+  window_height_ = window_height;
+  window_name_ = window_name;
+
+  glfw_window_ = glfwCreateWindow(window_width_, window_height_, 
+                                  window_name_.c_str(),
                                   nullptr, nullptr);
   
   if (glfw_window_ == nullptr) {
@@ -90,6 +96,11 @@ bool Window::ShouldQuit() {
   assert(glfw_window_ != nullptr);
 
   return (glfwWindowShouldClose(glfw_window_) == 1);
+}
+
+float Window::GetAspectRatio() {
+  return static_cast<float>(window_width_) / 
+         static_cast<float>(window_height_);
 }
 
 void Window::RegisterKeyBinding(int key, KeyActionType action,

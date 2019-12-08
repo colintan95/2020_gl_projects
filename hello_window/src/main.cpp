@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
   gfx_utils::Window window;
 
-  if (!window.Inititalize()) {
+  if (!window.Inititalize(1024, 768, "Hello Window")) {
     std::cerr << "Failed to initialize gfx window" << std::endl;
     exit(1);
   }
@@ -119,30 +119,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  GLuint program_id = glCreateProgram();
-  glAttachShader(program_id, vert_shader_id);
-  glAttachShader(program_id, frag_shader_id);
-  glLinkProgram(program_id);
-
-  // Check that the program was successfully created
-  gl_result = GL_FALSE;
-  glGetProgramiv(program_id, GL_LINK_STATUS, &gl_result);
-  if (gl_result == GL_FALSE) {
-    int log_length;
-    glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
-
-    if (log_length > 0) {
-      std::vector<GLchar> error_log(log_length);
-      glGetProgramInfoLog(program_id, log_length, nullptr, &error_log[0]);
-      std::cerr << &error_log[0] << std::endl;
-    }
-
+  GLuint program_id;  
+  if (!gfx_utils::CreateProgram(&program_id, vert_shader_path, 
+                                frag_shader_path)) {
     exit(1);
   }
-
-  glDeleteShader(frag_shader_id);
-  glDeleteShader(vert_shader_id);
-  
   glUseProgram(program_id);
 
   GLuint texture_id;
@@ -204,8 +185,9 @@ int main(int argc, char *argv[]) {
       glm::rotate(glm::mat4(1.f), -(static_cast<float>(kPi)/2.f),
                   glm::vec3(1.f, 0.f, 0.f));
     glm::mat4 view_mat = camera.CalcViewMatrix();
-    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 4.f / 3.f,
-                                        0.1f, 100.f);
+    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f),
+                                          window.GetAspectRatio(),
+                                          0.1f, 100.f);
     glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
 
     GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");

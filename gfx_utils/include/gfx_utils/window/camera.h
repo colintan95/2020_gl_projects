@@ -17,6 +17,7 @@ public:
   bool Initialize(Window *window);
 
   glm::mat4 CalcViewMatrix();
+  glm::vec3 GetCameraLocation();
 
 private:
   enum CameraAction {
@@ -51,8 +52,8 @@ private:
 
   void ResetCameraMode();
 
-  // TODO(colintan): Consider changing this to RotateLocalAxes() and
-  // RotateGlobalAxes() where these functions takes as params the axis (x,y,z) 
+  // TODO(colintan): Consider changing these to RotateLocalAxes() and
+  // RotateGlobalAxes() where these functions take as params the axis (x,y,z) 
   // to rotate about and the angle change
   // May be needed if, for example, we may want to rotate about the y-axis
   // (yaw) at times by the global axes and at times by the local axes, not
@@ -64,12 +65,12 @@ private:
   // global transform
   glm::vec3 LocalToGlobalTransform(glm::vec3 vec_local);
 
-private:
+private: 
   Window *window_;
 
   glm::quat camera_rotation_;
-
   glm::vec3 camera_loc_;
+  
   CameraMode camera_mode_;
 
   double prev_mouse_x_;

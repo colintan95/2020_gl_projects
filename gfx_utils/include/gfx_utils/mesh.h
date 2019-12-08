@@ -12,6 +12,8 @@
 
 namespace gfx_utils {
 
+const glm::vec3 kDefaultMeshColor = {0.5f, 0.5f, 0.5f};
+
 struct Mesh {
   std::vector<glm::vec3> pos_data;
   std::vector<glm::vec3> normal_data;
@@ -24,11 +26,16 @@ struct Mesh {
   uint32_t num_verts;
 
   std::vector<Material> material_list;
+
+  bool is_textured = false;
+  glm::vec3 color = kDefaultMeshColor;
 };
 
 bool CreateMeshesFromFile(std::vector<Mesh> *out_meshes, const std::string& path);
 
 //bool CreateMeshFromFileUnindexed(Mesh *out_mesh, const std::string& path);
+
+void ClearMesh(Mesh *mesh);
 
 }
 
