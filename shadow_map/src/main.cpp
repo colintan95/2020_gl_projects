@@ -24,7 +24,7 @@
 #include "gfx_utils/primitives.h"
 
 // TODO(colintan): Define this somewhere else
-const float kPi = 3.14159265358979323846;
+const float kPi = 3.14159265358979323846f;
 
 static const std::string vert_shader_path = "shaders/simple_light.vert";
 static const std::string frag_shader_path = "shaders/simple_light.frag";
@@ -54,31 +54,47 @@ int main(int argc, char *argv[]) {
                              glm::vec3( 10.f,  10.f, 0.f));
   meshes.push_back(&wall);
 
-  std::vector<gfx_utils::SceneObject> scene_objects;
-  // Front wall
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 0.f, -40.f),
-                                            glm::vec3(2.f, 1.f, 1.f), 
-                                            0.f, 0.f, 0.f)); 
-  // Back wall
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 0.f, 40.f),
-                                            glm::vec3(2.f, 1.f, 1.f), 
-                                            kPi, 0.f, 0.f));
-  // Left wall
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(-20.f, 0.f, 0.f),
-                                            glm::vec3(4.f, 1.f, 1.f), 
-                                            0.5f * kPi, 0.f, 0.f)); 
-  // Right wall
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(20.f, 0.f, 0.f),
-                                            glm::vec3(4.f, 1.f, 1.f), 
-                                            -0.5f * kPi, 0.f, 0.f)); 
-  // Ceiling
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 10.f, 0.f),
-                                            glm::vec3(2.f, 4.f, 1.f), 
-                                            0.f, 0.5f * kPi, 0.f));       
-  // Floor
-  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, -10.f, 0.f),
-                                            glm::vec3(2.f, 4.f, 1.f), 
-                                            0.f, -0.5f * kPi, 0.f));                                       
+  std::vector<gfx_utils::SceneObject*> scene_objs;
+  
+  std::vector<gfx_utils::SceneObject> room_children_objs;
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(0.f, 0.f, -40.f),
+                            glm::vec3(2.f, 1.f, 1.f), 
+                            0.f, 0.f, 0.f)); // Front wall
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(0.f, 0.f, 40.f),
+                             glm::vec3(2.f, 1.f, 1.f), 
+                             kPi, 0.f, 0.f)); // Back wall
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(-20.f, 0.f, 0.f),
+                             glm::vec3(4.f, 1.f, 1.f), 
+                             0.5f * kPi, 0.f, 0.f)); // Left wall
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(20.f, 0.f, 0.f),
+                             glm::vec3(4.f, 1.f, 1.f), 
+                             -0.5f * kPi, 0.f, 0.f)); // Right wall
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(0.f, 10.f, 0.f),
+                             glm::vec3(2.f, 4.f, 1.f), 
+                             0.f, 0.5f * kPi, 0.f)); // Ceiling
+  room_children_objs.push_back(
+      gfx_utils::SceneObject(&wall, glm::vec3(0.f, -10.f, 0.f),
+                             glm::vec3(2.f, 4.f, 1.f), 
+                             0.f, -0.5f * kPi, 0.f)); // Floor  
+
+  // Room is a meshless scene object that has the walls, ceiling and floor
+  // as its children - so we can transform the whole room as a single object                           
+  gfx_utils::SceneObject room_obj(nullptr, glm::vec3(0.f, 5.f, 0.f),
+                                  glm::vec3(1.f, 1.f, 1.f),
+                                  0.f, 0.f, 0.f);
+  for (auto& obj : room_children_objs) {
+    obj.SetParent(&room_obj);
+  }
+
+  for (auto& obj : room_children_objs) {
+    scene_objs.push_back(&obj);
+  }
+  scene_objs.push_back(&room_obj);
           
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
@@ -154,11 +170,16 @@ int main(int argc, char *argv[]) {
     glUniform3fv(light_loc_loc, 1, glm::value_ptr(light_loc));
     glUniform3fv(camera_loc_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
 
-    for (size_t i = 0; i < scene_objects.size(); ++i) {
-      const auto& scene_obj = scene_objects[i];
-      const auto& mesh = *scene_obj.mesh;
+    for (size_t i = 0; i < scene_objs.size(); ++i) {
+      gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
 
-      glm::mat4 model_mat = scene_obj.CalcModelMatrix();
+      if (!scene_obj_ptr->HasMesh()) {
+        continue;
+      }
+
+      const gfx_utils::Mesh *mesh_ptr = scene_obj_ptr->GetMesh();
+
+      glm::mat4 model_mat = scene_obj_ptr->CalcTransform();
       glm::mat4 mv_mat = view_mat * model_mat;
       glm::mat4 mvp_mat = proj_mat * mv_mat;
       glUniformMatrix4fv(mv_mat_loc, 1, GL_FALSE, glm::value_ptr(mv_mat));
@@ -170,15 +191,15 @@ int main(int argc, char *argv[]) {
       glUniformMatrix3fv(normal_mat_loc, 1, GL_FALSE, 
                          glm::value_ptr(normal_mat));
 
-      if (mesh.is_textured == false) {
-        glUniform3fv(mesh_color_loc, 1, glm::value_ptr(mesh.color));
+      if (mesh_ptr->is_textured == false) {
+        glUniform3fv(mesh_color_loc, 1, glm::value_ptr(mesh_ptr->color));
       }
 
       // Set vertex attributes
 
       glBindVertexArray(vao_id);
 
-      int mesh_idx = mesh_to_idx_map[&mesh];
+      int mesh_idx = mesh_to_idx_map[mesh_ptr];
 
       glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[mesh_idx]);
       glEnableVertexAttribArray(0);
@@ -189,7 +210,7 @@ int main(int argc, char *argv[]) {
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[mesh_idx]);
-      glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
+      glDrawElements(GL_TRIANGLES, mesh_ptr->num_verts, GL_UNSIGNED_INT,
           (void*)0);
     }
 

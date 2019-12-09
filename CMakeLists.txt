@@ -45,8 +45,6 @@ set(STB_INCLUDE_DIRS
 add_subdirectory(gfx_utils)
 
 # Place targets for the graphics projects here
-add_subdirectory(hello_triangle)
-add_subdirectory(hello_mesh)
 add_subdirectory(hello_sponza)
 add_subdirectory(hello_window)
 add_subdirectory(shadow_map)

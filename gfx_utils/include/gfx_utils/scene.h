@@ -9,20 +9,30 @@ namespace gfx_utils {
 // Foward declaration
 struct Mesh;
 
-struct SceneObject {
-  Mesh *mesh;
+class SceneObject {
 
-  glm::vec3 location;
-  glm::quat rotation;
-  glm::vec3 scale;
+public:
+  SceneObject(Mesh *mesh, glm::vec3 location, glm::vec3 scale,
+                    float yaw, float pitch, float roll);
+  SceneObject(Mesh *mesh);
 
-  glm::mat4 CalcModelMatrix() const;
+  glm::mat4 CalcTransform() const;
+
+  void SetParent(SceneObject *parent);
+
+  const Mesh * GetMesh() const { return mesh_; }
+
+  bool HasMesh() const { return mesh_ != nullptr; }
+
+private:
+  SceneObject *parent_;
+
+  Mesh *mesh_;
+
+  glm::vec3 location_;
+  glm::quat rotation_;
+  glm::vec3 scale_;
 };
-
-SceneObject CreateSceneObject(Mesh *mesh, glm::vec3 location, glm::vec3 scale,
-                              float yaw, float pitch, float roll);
-
-SceneObject CreateSceneObject(Mesh *mesh);
 
 } // namespace gfx_utils
 
