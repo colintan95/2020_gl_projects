@@ -19,11 +19,12 @@
 #include "gfx_utils/window/camera.h"
 #include "gfx_utils/shader.h"
 #include "gfx_utils/mesh.h"
+#include "gfx_utils/scene.h"
 #include "gfx_utils/texture.h"
 #include "gfx_utils/primitives.h"
 
 // TODO(colintan): Define this somewhere else
-const double kPi = 3.14159265358979323846;
+const float kPi = 3.14159265358979323846;
 
 static const std::string vert_shader_path = "shaders/simple_light.vert";
 static const std::string frag_shader_path = "shaders/simple_light.frag";
@@ -44,17 +45,46 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  std::vector<gfx_utils::Mesh> meshes;
+  std::vector<gfx_utils::Mesh*> meshes;
 
-  // Creates a room around the origin
-  std::vector<gfx_utils::Mesh> room = gfx_utils::CreateRoom(40.f, 20.f, 80.f);
-  meshes.insert(meshes.end(), std::make_move_iterator(room.begin()), 
-                std::make_move_iterator(room.end()));
-  
+  gfx_utils::Mesh wall = 
+      gfx_utils::CreatePlane(glm::vec3(-10.f,  10.f, 0.f),
+                             glm::vec3(-10.f, -10.f, 0.f),
+                             glm::vec3( 10.f, -10.f, 0.f),
+                             glm::vec3( 10.f,  10.f, 0.f));
+  meshes.push_back(&wall);
+
+  std::vector<gfx_utils::SceneObject> scene_objects;
+  // Front wall
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 0.f, -40.f),
+                                            glm::vec3(2.f, 1.f, 1.f), 
+                                            0.f, 0.f, 0.f)); 
+  // Back wall
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 0.f, 40.f),
+                                            glm::vec3(2.f, 1.f, 1.f), 
+                                            kPi, 0.f, 0.f));
+  // Left wall
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(-20.f, 0.f, 0.f),
+                                            glm::vec3(4.f, 1.f, 1.f), 
+                                            0.5f * kPi, 0.f, 0.f)); 
+  // Right wall
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(20.f, 0.f, 0.f),
+                                            glm::vec3(4.f, 1.f, 1.f), 
+                                            -0.5f * kPi, 0.f, 0.f)); 
+  // Ceiling
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, 10.f, 0.f),
+                                            glm::vec3(2.f, 4.f, 1.f), 
+                                            0.f, 0.5f * kPi, 0.f));       
+  // Floor
+  scene_objects.push_back(CreateSceneObject(&wall, glm::vec3(0.f, -10.f, 0.f),
+                                            glm::vec3(2.f, 4.f, 1.f), 
+                                            0.f, -0.5f * kPi, 0.f));                                       
+          
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
+  glEnable(GL_CULL_FACE);
 
   GLuint program_id;
   if (!gfx_utils::CreateProgram(&program_id, vert_shader_path, 
@@ -70,27 +100,33 @@ int main(int argc, char *argv[]) {
   std::vector<GLuint> normal_vbo_id_list;
   std::vector<GLuint> ibo_id_list;
 
-  for (const auto& mesh : meshes) {
+  // TODO(colintan): Is this a good solution?
+  // Maps a mesh to the index in the buffers that contain the mesh's data
+  std::unordered_map<const gfx_utils::Mesh*, int> mesh_to_idx_map;
+
+  for (auto mesh_ptr : meshes) {
+    mesh_to_idx_map[mesh_ptr] = static_cast<int>(ibo_id_list.size());
+
     GLuint pos_vbo_id;
     glGenBuffers(1, &pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
     glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, mesh.pos_data.size() * 3 * sizeof(float),
-                 &mesh.pos_data[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mesh_ptr->pos_data.size() * 3 * sizeof(float),
+                 &mesh_ptr->pos_data[0], GL_STATIC_DRAW);
     pos_vbo_id_list.push_back(pos_vbo_id);
 
     GLuint normal_vbo_id;
     glGenBuffers(1, &normal_vbo_id);
     glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, mesh.normal_data.size() * 3 * sizeof(float),
-                 &mesh.normal_data[0], GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, mesh_ptr->normal_data.size() * 3 * sizeof(float),
+                 &mesh_ptr->normal_data[0], GL_STATIC_DRAW);
     normal_vbo_id_list.push_back(normal_vbo_id);
 
     GLuint ibo_id;
     glGenBuffers(1, &ibo_id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-      mesh.index_data.size() * sizeof(uint32_t),
-      &mesh.index_data[0],
+      mesh_ptr->index_data.size() * sizeof(uint32_t),
+      &mesh_ptr->index_data[0],
       GL_STATIC_DRAW);
     ibo_id_list.push_back(ibo_id);
   }
@@ -113,13 +149,16 @@ int main(int argc, char *argv[]) {
     GLint camera_loc_loc = glGetUniformLocation(program_id, "camera_loc");
 
     glm::vec3 light_loc = glm::vec3(view_mat * glm::mat4(1.f) *
-                                    glm::vec4(0.f, 0.f, 0.f, 1.f));
+                                    glm::vec4(0.f, 5.f, 0.f, 1.f));
 
     glUniform3fv(light_loc_loc, 1, glm::value_ptr(light_loc));
     glUniform3fv(camera_loc_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
 
-    for (size_t i = 0; i < meshes.size(); ++i) {
-      glm::mat4 model_mat = glm::mat4(1.f);
+    for (size_t i = 0; i < scene_objects.size(); ++i) {
+      const auto& scene_obj = scene_objects[i];
+      const auto& mesh = *scene_obj.mesh;
+
+      glm::mat4 model_mat = scene_obj.CalcModelMatrix();
       glm::mat4 mv_mat = view_mat * model_mat;
       glm::mat4 mvp_mat = proj_mat * mv_mat;
       glUniformMatrix4fv(mv_mat_loc, 1, GL_FALSE, glm::value_ptr(mv_mat));
@@ -131,24 +170,26 @@ int main(int argc, char *argv[]) {
       glUniformMatrix3fv(normal_mat_loc, 1, GL_FALSE, 
                          glm::value_ptr(normal_mat));
 
-      if (meshes[i].is_textured == false) {
-        glUniform3fv(mesh_color_loc, 1, glm::value_ptr(meshes[i].color));
+      if (mesh.is_textured == false) {
+        glUniform3fv(mesh_color_loc, 1, glm::value_ptr(mesh.color));
       }
 
       // Set vertex attributes
 
       glBindVertexArray(vao_id);
 
-      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[i]);
+      int mesh_idx = mesh_to_idx_map[&mesh];
+
+      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[mesh_idx]);
       glEnableVertexAttribArray(0);
       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id_list[i]);
+      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id_list[mesh_idx]);
       glEnableVertexAttribArray(1);
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[i]);
-      glDrawElements(GL_TRIANGLES, meshes[i].num_verts, GL_UNSIGNED_INT,
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[mesh_idx]);
+      glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
           (void*)0);
     }
 

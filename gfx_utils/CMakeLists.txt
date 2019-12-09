@@ -1,6 +1,6 @@
-add_library(gfx_utils src/shader.cpp src/mesh.cpp src/texture.cpp 
-                      src/window/window.cpp src/window/camera.cpp
-                      src/primitives.cpp)
+add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/scene.cpp
+                      src/primitives.cpp src/shader.cpp src/texture.cpp 
+                      src/window/window.cpp src/window/camera.cpp)
 
 target_include_directories(gfx_utils PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include")

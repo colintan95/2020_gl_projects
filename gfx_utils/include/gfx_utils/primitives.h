@@ -14,8 +14,6 @@ namespace gfx_utils {
 // pt1---pt2
 Mesh CreatePlane(glm::vec3 pt0, glm::vec3 pt1, glm::vec3 pt2,  glm::vec3 pt3);
 
-std::vector<Mesh> CreateRoom(float width, float height, float depth);
-
 }
 
 #endif

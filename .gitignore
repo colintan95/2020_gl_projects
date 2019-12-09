@@ -2,6 +2,10 @@
 /build
 /out
 
+# Assets will be managed separately - so that they won't bloat the source
+# code repo
+/assets
+
 # Ignore any files or folders by visual studio or vs code
 /.vs
 /.vscode
