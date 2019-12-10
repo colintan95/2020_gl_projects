@@ -180,6 +180,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < meshes.size(); ++i) {
       // Set the materials data in the fragment shader
 
+      // TODO(colintan): this may actually not work
       const auto& mtl_list = meshes[i].material_list;
       for (size_t j = 0; j < mtl_list.size(); ++j) {
         GLint base_idx = materials_loc + j * 6;

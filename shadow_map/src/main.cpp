@@ -19,6 +19,7 @@
 #include "gfx_utils/window/camera.h"
 #include "gfx_utils/shader.h"
 #include "gfx_utils/mesh.h"
+#include "gfx_utils/material.h"
 #include "gfx_utils/scene.h"
 #include "gfx_utils/texture.h"
 #include "gfx_utils/primitives.h"
@@ -52,6 +53,14 @@ int main(int argc, char *argv[]) {
                              glm::vec3(-10.f, -10.f, 0.f),
                              glm::vec3( 10.f, -10.f, 0.f),
                              glm::vec3( 10.f,  10.f, 0.f));
+  gfx_utils::Material wall_mtl;
+  wall_mtl.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
+  wall_mtl.diffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+  wall_mtl.specular = glm::vec3(0.5f, 0.5f, 0.5f);
+  wall_mtl.emission = glm::vec3(0.f, 0.f, 0.f);
+  wall_mtl.shininess = 10;
+  wall.material_list.push_back(std::move(wall_mtl));
+
   meshes.push_back(&wall);
 
   std::vector<gfx_utils::SceneObject*> scene_objs;
@@ -160,15 +169,27 @@ int main(int argc, char *argv[]) {
     GLint mv_mat_loc = glGetUniformLocation(program_id, "mv_mat");
     GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");
     GLint normal_mat_loc = glGetUniformLocation(program_id, "normal_mat");
-    GLint mesh_color_loc = glGetUniformLocation(program_id, "mesh_color");
-    GLint light_loc_loc = glGetUniformLocation(program_id, "light_loc");
-    GLint camera_loc_loc = glGetUniformLocation(program_id, "camera_loc");
 
-    glm::vec3 light_loc = glm::vec3(view_mat * glm::mat4(1.f) *
+    GLint camera_pos_loc = glGetUniformLocation(program_id, "camera_pos");
+
+    GLint ambient_color_loc = glGetUniformLocation(program_id, "ambient_color");
+
+    glUniform3fv(camera_pos_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
+
+    glm::vec3 light_pos = glm::vec3(view_mat * glm::mat4(1.f) *
                                     glm::vec4(0.f, 5.f, 0.f, 1.f));
-
-    glUniform3fv(light_loc_loc, 1, glm::value_ptr(light_loc));
-    glUniform3fv(camera_loc_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
+    GLint light_pos_loc =
+        glGetUniformLocation(program_id, "lights[0].position"); 
+    GLint light_diffuse_color_loc =
+        glGetUniformLocation(program_id, "lights[0].diffuse_color");     
+    GLint light_specular_color_loc =
+        glGetUniformLocation(program_id, "lights[0].specular_color");                                
+    glUniform3fv(light_pos_loc, 1, glm::value_ptr(light_pos));
+    glUniform3fv(light_diffuse_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+    glUniform3fv(light_specular_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+ 
+    glm::vec3 ambient_color = glm::vec3(0.5f, 0.5f, 0.5f);
+    glUniform3fv(ambient_color_loc, 1, glm::value_ptr(ambient_color));
 
     for (size_t i = 0; i < scene_objs.size(); ++i) {
       gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
@@ -191,9 +212,26 @@ int main(int argc, char *argv[]) {
       glUniformMatrix3fv(normal_mat_loc, 1, GL_FALSE, 
                          glm::value_ptr(normal_mat));
 
-      if (mesh_ptr->is_textured == false) {
-        glUniform3fv(mesh_color_loc, 1, glm::value_ptr(mesh_ptr->color));
-      }
+      // Set the materials data in the fragment shader
+
+      // TODO(colintan): Modify this so that we can render a mesh that has
+      // multiple materials
+      const auto& mtl_list = mesh_ptr->material_list;
+      GLint mtl_ambient_loc = 
+          glGetUniformLocation(program_id, "materials[0].ambient");
+      GLint mtl_diffuse_loc = 
+          glGetUniformLocation(program_id, "materials[0].diffuse");
+      GLint mtl_specular_loc = 
+          glGetUniformLocation(program_id, "materials[0].specular");
+      GLint mtl_emission_loc = 
+          glGetUniformLocation(program_id, "materials[0].emission");
+      GLint mtl_shininess_loc = 
+          glGetUniformLocation(program_id, "materials[0].shininess");
+      glUniform3fv(mtl_ambient_loc, 1, glm::value_ptr(mtl_list[0].ambient));
+      glUniform3fv(mtl_diffuse_loc, 1, glm::value_ptr(mtl_list[0].diffuse));
+      glUniform3fv(mtl_specular_loc, 1, glm::value_ptr(mtl_list[0].specular));
+      glUniform3fv(mtl_emission_loc, 1, glm::value_ptr(mtl_list[0].emission));
+      glUniform1f(mtl_shininess_loc, mtl_list[0].shininess);
 
       // Set vertex attributes
 
