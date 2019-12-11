@@ -23,6 +23,8 @@ public:
   void AddMesh(Mesh* mesh);
   void SetParent(SceneObject* parent);
 
+  void SetScale(glm::vec3 scale) { scale_ = scale; }
+
   const std::vector<Mesh*>& GetMeshes() const { return meshes_; }
 
   bool HasMeshes() const { return meshes_.size() != 0; }

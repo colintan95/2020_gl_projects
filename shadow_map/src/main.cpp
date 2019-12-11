@@ -121,10 +121,12 @@ int main(int argc, char* argv[]) {
   }
   scene_objs.push_back(&room_obj);
 
+  // Create SceneObject for the F16
   gfx_utils::SceneObject f16_obj;
   for (auto& mesh : f16_meshes) {
     f16_obj.AddMesh(&mesh);
   }
+  f16_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
   scene_objs.push_back(&f16_obj);
           
   // Enable all necessary GL settings
@@ -214,7 +216,7 @@ int main(int argc, char* argv[]) {
     glUniform3fv(camera_pos_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
 
     glm::vec3 light_pos = glm::vec3(view_mat * glm::mat4(1.f) *
-                                    glm::vec4(0.f, 5.f, 0.f, 1.f));
+                                    glm::vec4(0.f, 5.f, 10.f, 1.f));
     GLint light_pos_loc =
         glGetUniformLocation(program_id, "lights[0].position"); 
     GLint light_diffuse_color_loc =
@@ -224,6 +226,19 @@ int main(int argc, char* argv[]) {
     glUniform3fv(light_pos_loc, 1, glm::value_ptr(light_pos));
     glUniform3fv(light_diffuse_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
     glUniform3fv(light_specular_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+
+    glm::vec3 light2_pos = glm::vec3(view_mat * glm::mat4(1.f) *
+                                    glm::vec4(0.f, 5.f, -10.f, 1.f));
+
+    GLint light2_pos_loc =
+        glGetUniformLocation(program_id, "lights[1].position"); 
+    GLint light2_diffuse_color_loc =
+        glGetUniformLocation(program_id, "lights[1].diffuse_color");     
+    GLint light2_specular_color_loc =
+        glGetUniformLocation(program_id, "lights[1].specular_color");                                
+    glUniform3fv(light2_pos_loc, 1, glm::value_ptr(light2_pos));
+    glUniform3fv(light2_diffuse_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.f, 0.f)));
+    glUniform3fv(light2_specular_color_loc, 1, glm::value_ptr(glm::vec3(0.5f, 0.f, 0.f)));
  
     glm::vec3 ambient_color = glm::vec3(0.5f, 0.5f, 0.5f);
     glUniform3fv(ambient_color_loc, 1, glm::value_ptr(ambient_color));
@@ -312,7 +327,7 @@ int main(int argc, char* argv[]) {
   }
 
   glDeleteBuffers(static_cast<GLsizei>(ibo_id_list.size()), &ibo_id_list[0]);
-  glDeleteBuffers(mtl_vbo_id_list.size(), &mtl_vbo_id_list[0]);
+  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list.size()), &mtl_vbo_id_list[0]);
   glDeleteBuffers(static_cast<GLsizei>(normal_vbo_id_list.size()), 
       &normal_vbo_id_list[0]);
   glDeleteBuffers(static_cast<GLsizei>(pos_vbo_id_list.size()), 
