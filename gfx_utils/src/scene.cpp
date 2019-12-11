@@ -6,20 +6,21 @@
 
 namespace gfx_utils {
 
-SceneObject::SceneObject(Mesh *mesh, glm::vec3 location, glm::vec3 scale,
-                         float yaw, float pitch, float roll) {
+SceneObject::SceneObject(glm::vec3 location, glm::vec3 scale, float yaw, 
+                         float pitch, float roll) {
   parent_ = nullptr;
 
-  mesh_ = mesh;
-  
   location_ = location;
   scale_ = scale;
   rotation_ = glm::quat(glm::vec3(pitch, yaw, roll));                             
 }
 
-SceneObject::SceneObject(Mesh *mesh) {
-  SceneObject(mesh, glm::vec3(0.f, 0.f, 0.f), glm::vec3(1.f, 1.f, 1.f), 
-              0.f, 0.f, 0.f);
+SceneObject::SceneObject() {
+  parent_ = nullptr;
+  
+  location_ = glm::vec3(0.f, 0.f, 0.f);
+  scale_ = glm::vec3(1.f, 1.f, 1.f);
+  rotation_ = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 }
 
 glm::mat4 SceneObject::CalcTransform() const {
@@ -36,7 +37,13 @@ glm::mat4 SceneObject::CalcTransform() const {
   return model_mat;
 }
 
-void SceneObject::SetParent(SceneObject *parent) {
+void SceneObject::AddMesh(Mesh* mesh) {
+  if (mesh != nullptr) {
+    meshes_.push_back(mesh);
+  }
+}
+
+void SceneObject::SetParent(SceneObject* parent) {
   parent_ = parent;
 }
 

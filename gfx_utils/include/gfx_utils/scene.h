@@ -1,6 +1,8 @@
 #ifndef GFX_UTILS_SCENE_H_
 #define GFX_UTILS_SCENE_H_
 
+#include <vector>
+
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -12,22 +14,23 @@ struct Mesh;
 class SceneObject {
 
 public:
-  SceneObject(Mesh *mesh, glm::vec3 location, glm::vec3 scale,
-                    float yaw, float pitch, float roll);
-  SceneObject(Mesh *mesh);
+  SceneObject(glm::vec3 location, glm::vec3 scale, float yaw, float pitch, 
+              float roll);
+  SceneObject();
 
   glm::mat4 CalcTransform() const;
 
-  void SetParent(SceneObject *parent);
+  void AddMesh(Mesh* mesh);
+  void SetParent(SceneObject* parent);
 
-  const Mesh * GetMesh() const { return mesh_; }
+  const std::vector<Mesh*>& GetMeshes() const { return meshes_; }
 
-  bool HasMesh() const { return mesh_ != nullptr; }
+  bool HasMeshes() const { return meshes_.size() != 0; }
 
 private:
-  SceneObject *parent_;
+  SceneObject* parent_;
 
-  Mesh *mesh_;
+  std::vector<Mesh*> meshes_;
 
   glm::vec3 location_;
   glm::quat rotation_;

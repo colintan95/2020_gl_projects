@@ -2,6 +2,7 @@
 
 in vec3 frag_pos;
 in vec3 frag_normal;
+flat in uint frag_mtl_id;
 
 out vec4 out_color;
 
@@ -21,8 +22,8 @@ struct Material {
   float shininess;
 };
 
-uniform PointLight lights[2];
-uniform Material materials[2];
+uniform PointLight lights[5];
+uniform Material materials[5];
 
 uniform vec3 ambient_color;
 
@@ -40,11 +41,14 @@ void main() {
 
   vec3 half_vec = normalize(normalize(light_vec) + normalize(view_vec));
   float specular_dot = max(dot(half_vec, normalize(frag_normal)), 0.0);
-  float specular_coeff = attenuation * pow(specular_dot, materials[0].shininess);
+  float specular_coeff = attenuation * 
+      pow(specular_dot, materials[frag_mtl_id].shininess);
 
-  out_color = vec4(materials[0].emission + 
-                   materials[0].ambient * ambient_color +
-                   materials[0].diffuse * lights[0].diffuse_color * diffuse_coeff +
-                   materials[0].specular * lights[0].specular_color * specular_coeff, 
+  out_color = vec4(materials[frag_mtl_id].emission + // emission
+                   materials[frag_mtl_id].ambient * ambient_color + // ambient
+                   materials[frag_mtl_id].diffuse * 
+                      lights[0].diffuse_color * diffuse_coeff + // diffuse
+                   materials[frag_mtl_id].specular * 
+                      lights[0].specular_color * specular_coeff, // specular
                    1.0);
 }
