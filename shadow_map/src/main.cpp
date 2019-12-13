@@ -23,6 +23,8 @@
 #include "gfx_utils/scene.h"
 #include "gfx_utils/texture.h"
 #include "gfx_utils/primitives.h"
+#include "gfx_utils/lights.h"
+#include "gfx_utils/debug/wireframe_drawer.h"
 
 // TODO(colintan): Define this somewhere else
 const float kPi = 3.14159265358979323846f;
@@ -45,6 +47,13 @@ int main(int argc, char* argv[]) {
 
   if (!camera.Initialize(&window)) {
     std::cerr << "Failed to initialize camera" << std::endl;
+    exit(1);
+  }
+
+  gfx_utils::WireframeDrawer wireframe_drawer;
+
+  if (!wireframe_drawer.Initialize()) {
+    std::cerr << "Failed to initialize wireframe drawer" << std::endl;
     exit(1);
   }
 
@@ -147,6 +156,21 @@ int main(int argc, char* argv[]) {
   cube_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
   scene_objs.push_back(&cube_obj);
 
+  // TODO(colintan): Delete this when done
+  gfx_utils::Mesh frustum_mesh = 
+      gfx_utils::CreatePerspectiveFrustum(kPi / 4.f, 1.f, 5.f, 10.f);
+  GLuint frustum_pos_vbo_id;
+  glGenBuffers(1, &frustum_pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
+  glBindBuffer(GL_ARRAY_BUFFER, frustum_pos_vbo_id);
+  glBufferData(GL_ARRAY_BUFFER, frustum_mesh.pos_data.size() * 3 * sizeof(float),
+                &frustum_mesh.pos_data[0], GL_STATIC_DRAW);
+  GLuint frustum_ibo_id;
+  glGenBuffers(1, &frustum_ibo_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frustum_ibo_id);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                frustum_mesh.index_data.size() * sizeof(uint32_t),
+                &frustum_mesh.index_data[0], GL_STATIC_DRAW);
+
   std::unordered_map<std::string, gfx_utils::Texture> texture_data_map;
 
   // Load Cube texture
@@ -158,6 +182,25 @@ int main(int argc, char* argv[]) {
     std::cerr << "Failed to load cube texture" << std::endl;
     exit(1);        
   }
+
+  // Create Lights
+  std::vector<gfx_utils::SpotLight*> lights;
+
+  gfx_utils::SpotLight white_light;
+  white_light.position = glm::vec3(0.f, 10.f, 10.f);
+  white_light.diffuse_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
+  white_light.specular_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
+  white_light.direction = glm::vec3(0.f, -1.f, 0.f);
+  white_light.cone_angle = kPi / 1.8f;
+  lights.push_back(&white_light);
+
+  gfx_utils::SpotLight red_light;
+  red_light.position = glm::vec3(0.f, 10.f, -10.f);
+  red_light.diffuse_intensity = glm::vec3(0.5f, 0.f, 0.f);
+  red_light.specular_intensity = glm::vec3(0.5f, 0.f, 0.f);
+  red_light.direction = glm::vec3(0.f, -1.f, 0.f);
+  red_light.cone_angle = kPi / 1.8f;
+  lights.push_back(&red_light);
           
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
@@ -167,9 +210,9 @@ int main(int argc, char* argv[]) {
 
   gfx_utils::Program program;
   if (!program.CreateProgram(vert_shader_path, frag_shader_path)) {
+    std::cerr << "Could not create light pass program." << std::endl;
     exit(1);
   }
-  GLuint program_id = program.GetProgramId();
   glUseProgram(program.GetProgramId());
 
   GLuint vao_id;
@@ -206,7 +249,7 @@ int main(int argc, char* argv[]) {
     glGenBuffers(1, &texcoord_vbo_id);
     glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
     glBufferData(GL_ARRAY_BUFFER, mesh_ptr->texcoord_data.size() * 2 * sizeof(float),
-      &mesh_ptr->texcoord_data[0], GL_STATIC_DRAW);
+                 &mesh_ptr->texcoord_data[0], GL_STATIC_DRAW);
     texcoord_vbo_id_list.push_back(texcoord_vbo_id);
 
     if (mesh_ptr->material_list.size() != 0) {
@@ -214,9 +257,8 @@ int main(int argc, char* argv[]) {
       glGenBuffers(1, &mtl_vbo_id);
       glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
       glBufferData(GL_ARRAY_BUFFER, 
-        mesh_ptr->mtl_id_data.size() * sizeof(unsigned int), 
-        &mesh_ptr->mtl_id_data[0], 
-        GL_STATIC_DRAW);
+                   mesh_ptr->mtl_id_data.size() * sizeof(unsigned int), 
+                   &mesh_ptr->mtl_id_data[0], GL_STATIC_DRAW);
       mtl_vbo_id_list.push_back(mtl_vbo_id);
     }
     else {
@@ -227,9 +269,8 @@ int main(int argc, char* argv[]) {
     glGenBuffers(1, &ibo_id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-      mesh_ptr->index_data.size() * sizeof(uint32_t),
-      &mesh_ptr->index_data[0],
-      GL_STATIC_DRAW);
+                 mesh_ptr->index_data.size() * sizeof(uint32_t),
+                 &mesh_ptr->index_data[0], GL_STATIC_DRAW);
     ibo_id_list.push_back(ibo_id);
   }
 
@@ -249,42 +290,63 @@ int main(int argc, char* argv[]) {
     
     GLenum format = texture.has_alpha ? GL_RGBA : GL_RGB;
     glTexImage2D(GL_TEXTURE_2D, 0, format, texture.tex_width, 
-      texture.tex_height, 0, format, GL_UNSIGNED_BYTE, &texture.tex_data[0]);
+                 texture.tex_height, 0, format, GL_UNSIGNED_BYTE, 
+                 &texture.tex_data[0]);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
     texture_id_map[texname] = texture_id;
   }
 
+  gfx_utils::Program shadow_program;
+  if (!shadow_program.CreateProgram("shaders/shadow_pass.vert",
+                                    "shaders/shadow_pass.frag")) {
+    std::cerr << "Could not create shadow pass program." << std::endl;
+    exit(1);
+  }
+  glUseProgram(shadow_program.GetProgramId());
+
   bool should_quit = false;
 
   while (!should_quit) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Shadow Pass
+    glUseProgram(shadow_program.GetProgramId());
+
+    glm::mat4 light_proj_mat = glm::perspective(white_light.cone_angle, 
+                                                1.f, 0.1f, 1000.f);
+    glm::mat4 light_mvp_mat = light_proj_mat * camera.CalcViewMatrix();                                            
+
+    // Light Pass
+    glUseProgram(program.GetProgramId());
+
     glm::mat4 view_mat = camera.CalcViewMatrix();
     glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 
                                           window.GetAspectRatio(),
-                                          0.1f, 10000.f);
+                                          0.1f, 1000.f);
 
     program.GetUniform("camera_pos").Set(camera.GetCameraLocation());
 
-    glm::vec3 light_pos = glm::vec3(view_mat * glm::mat4(1.f) *
-                                    glm::vec4(0.f, 10.f, 10.f, 1.f));
+    for (int i = 0; i < lights.size(); ++i) {
+      gfx_utils::SpotLight* light_ptr = lights[i];
 
-    program.GetUniform("lights", 0, "position").Set(light_pos);
-    program.GetUniform("lights", 0, "diffuse_intensity")
-           .Set(glm::vec3(0.5f, 0.5f, 0.5f));
-    program.GetUniform("lights", 0, "specular_intensity")
-           .Set(glm::vec3(0.5f, 0.5f, 0.5f));
+      // Position of light in modelview space
+      glm::vec3 pos_mv = 
+          glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
+      glm::vec3 dir_mv = 
+          glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) * 
+                    light_ptr->direction);
 
-    glm::vec3 light2_pos = glm::vec3(view_mat * glm::mat4(1.f) *
-                                    glm::vec4(0.f, 10.f, -10.f, 1.f));
-
-    program.GetUniform("lights", 1, "position").Set(light2_pos);
-    program.GetUniform("lights", 1, "diffuse_intensity")
-           .Set(glm::vec3(0.5f, 0.f, 0.f));
-    program.GetUniform("lights", 1, "specular_intensity")
-           .Set(glm::vec3(0.5f, 0.f, 0.f));                                
+      program.GetUniform("lights", i, "position_mv").Set(pos_mv);
+      program.GetUniform("lights", i, "diffuse_intensity")
+             .Set(light_ptr->diffuse_intensity);
+      program.GetUniform("lights", i, "specular_intensity")
+             .Set(light_ptr->specular_intensity);
+      program.GetUniform("lights", i, "direction_mv").Set(dir_mv);
+      program.GetUniform("lights", i, "cone_angle")
+             .Set(light_ptr->cone_angle);
+    }                  
 
     program.GetUniform("ambient_intensity").Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
@@ -399,6 +461,11 @@ int main(int argc, char* argv[]) {
 
     glBindVertexArray(0);
 
+    glm::mat4 frustum_model_mat = 
+         glm::translate(glm::mat4(1.f), white_light.position);
+    wireframe_drawer.Draw(&frustum_mesh, frustum_pos_vbo_id, frustum_ibo_id, 
+                          proj_mat * view_mat * frustum_model_mat);
+
     window.SwapBuffers();
     window.TickMainLoop();
 
@@ -422,6 +489,8 @@ int main(int argc, char* argv[]) {
   glDeleteVertexArrays(1, &vao_id);
 
   program.DestroyProgram();
+
+  wireframe_drawer.Destroy();
 
   glfwTerminate();
 

@@ -1,6 +1,7 @@
 add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/scene.cpp
                       src/primitives.cpp src/program.cpp src/texture.cpp 
-                      src/window/window.cpp src/window/camera.cpp)
+                      src/window/window.cpp src/window/camera.cpp
+                      src/debug/wireframe_drawer.cpp)
 
 target_include_directories(gfx_utils PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include")

@@ -9,10 +9,13 @@ out vec4 out_color;
 
 uniform vec3 camera_pos;
 
-struct PointLight {
-  vec3 position;
+struct SpotLight {
+  vec3 position_mv; // in modelview space
   vec3 diffuse_intensity;
   vec3 specular_intensity;
+
+  vec3 direction_mv; // in modelview space (should multiply by normal mat)
+  float cone_angle; // in radians
 };
 
 struct Material {
@@ -31,7 +34,7 @@ struct Material {
   sampler2D specular_texture;
 };
 
-uniform PointLight lights[5];
+uniform SpotLight lights[5];
 uniform Material materials[5];
 
 uniform vec3 ambient_intensity;
@@ -63,7 +66,7 @@ void main() {
   // TODO(colintan): Should we have a uniform variable to tell us the number
   // of light sources?
   for (int i = 0; i < 5; ++i) {
-    vec3 light_vec = lights[i].position - frag_pos;
+    vec3 light_vec = lights[i].position_mv - frag_pos;
     vec3 view_vec = camera_pos - frag_pos;
 
     float light_dist = length(light_vec);
@@ -72,14 +75,22 @@ void main() {
     // TODO(colintan): Remove this once everything else is working
     attenuation = 1;
 
+    // See if there's a better way to do this
+    // Returns 0 if the light ray is outside the cone, 1 otherwise
+    float cone_occlude = 
+        clamp(sign(dot(normalize(-light_vec), 
+                       normalize(lights[i].direction_mv)) -
+                   cos(lights[i].cone_angle / 2.0)), 
+              0, 1);
+
     float diffuse_dot = max(dot(normalize(light_vec), normalize(frag_normal)), 
                             0.0);
-    float diffuse_coeff = attenuation * diffuse_dot;
+    float diffuse_coeff = cone_occlude * attenuation * diffuse_dot;
 
     vec3 half_vec = normalize(normalize(light_vec) + normalize(view_vec));
 
     float specular_dot = max(dot(half_vec, normalize(frag_normal)), 0.0);
-    float specular_coeff = attenuation * 
+    float specular_coeff = cone_occlude * attenuation *
         pow(specular_dot, materials[frag_mtl_id].shininess);
 
     diffuse  += mtl_diffuse  * lights[i].diffuse_intensity  * diffuse_coeff;
