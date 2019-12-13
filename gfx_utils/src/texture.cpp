@@ -7,7 +7,8 @@
 
 namespace gfx_utils {
 
-bool CreateTextureFromFile(Texture* out_tex, const std::string& path) {
+bool CreateTextureFromFile(Texture* out_tex, const std::string& tex_directory,
+                           const std::string& texname) {
   out_tex->tex_width = 0;
   out_tex->tex_height = 0;
   out_tex->has_alpha = false;
@@ -17,6 +18,7 @@ bool CreateTextureFromFile(Texture* out_tex, const std::string& path) {
   int tex_height = -1;
   int channels = -1;
 
+  std::string path = tex_directory + "/" + texname;
   stbi_set_flip_vertically_on_load(true);
   stbi_uc *pixels = stbi_load(path.c_str(), &tex_width, &tex_height, &channels, 
                               0);

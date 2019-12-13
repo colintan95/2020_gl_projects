@@ -31,7 +31,9 @@ struct Mesh {
   glm::vec3 color = kDefaultMeshColor;
 };
 
-bool CreateMeshesFromFile(std::vector<Mesh> *out_meshes, const std::string& path);
+bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes, 
+                          const std::string& mtl_directory,
+                          const std::string& mesh_path);
 
 //bool CreateMeshFromFileUnindexed(Mesh *out_mesh, const std::string& path);
 

@@ -17,7 +17,8 @@ struct Texture {
   std::vector<unsigned char> tex_data; 
 };
 
-bool CreateTextureFromFile(Texture *out_tex, const std::string& path);
+bool CreateTextureFromFile(Texture *out_tex, const std::string& tex_directory,
+                           const std::string& texname);
 
 }
 

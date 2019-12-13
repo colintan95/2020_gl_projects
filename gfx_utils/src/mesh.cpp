@@ -12,7 +12,8 @@
 namespace gfx_utils {
 
 bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes, 
-                        const std::string& path) {
+                          const std::string& mtl_directory,
+                          const std::string& mesh_path) {
   out_meshes->clear();
 
   tinyobj::attrib_t attribs;
@@ -21,7 +22,7 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
   std::string warn_str, err_str;
 
   if (!tinyobj::LoadObj(&attribs, &shape_data, &material_data, &warn_str,
-      &err_str, path.c_str(), "assets/models")) {
+      &err_str, mesh_path.c_str(), mtl_directory.c_str())) {
     return false;
   }
 
@@ -98,18 +99,18 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
         tinyobj::material_t loader_mtl = material_data[loader_id];
         Material mtl;
 
-        mtl.ambient = glm::vec3(loader_mtl.ambient[0],
-                                loader_mtl.ambient[1],
-                                loader_mtl.ambient[2]);
-        mtl.diffuse = glm::vec3(loader_mtl.diffuse[0],
-                                loader_mtl.diffuse[1],
-                                loader_mtl.diffuse[2]);
-        mtl.specular = glm::vec3(loader_mtl.specular[0],
-                                 loader_mtl.specular[1],
-                                 loader_mtl.specular[2]);
-        mtl.emission = glm::vec3(loader_mtl.emission[0],
-                                 loader_mtl.emission[1],
-                                 loader_mtl.emission[2]);
+        mtl.ambient_color  = glm::vec3(loader_mtl.ambient[0],
+                                       loader_mtl.ambient[1],
+                                       loader_mtl.ambient[2]);
+        mtl.diffuse_color  = glm::vec3(loader_mtl.diffuse[0],
+                                       loader_mtl.diffuse[1],
+                                       loader_mtl.diffuse[2]);
+        mtl.specular_color = glm::vec3(loader_mtl.specular[0],
+                                       loader_mtl.specular[1],
+                                       loader_mtl.specular[2]);
+        mtl.emission_color = glm::vec3(loader_mtl.emission[0],
+                                      loader_mtl.emission[1],
+                                      loader_mtl.emission[2]);
         mtl.shininess = loader_mtl.shininess;
 
         switch (loader_mtl.illum) {
@@ -128,7 +129,13 @@ bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes,
         }
 
         if (!loader_mtl.ambient_texname.empty()) {
-          mtl.texture_path = "assets/" + loader_mtl.ambient_texname;
+          mtl.ambient_texname = loader_mtl.ambient_texname;
+        }
+        if (!loader_mtl.diffuse_texname.empty()) {
+          mtl.diffuse_texname = loader_mtl.diffuse_texname;
+        }
+        if (!loader_mtl.specular_texname.empty()) {
+          mtl.specular_texname = loader_mtl.specular_texname;
         }
 
         mtl_conversion_table[loader_id] = out_mesh.material_list.size();
