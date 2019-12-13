@@ -1,5 +1,6 @@
-#include "gfx_utils/shader.h"
+#include "gfx_utils/program.h"
 
+#include <cassert>
 #include <iostream>
 #include <cstdlib>
 #include <string>
@@ -8,16 +9,38 @@
 #include <fstream>
 #include <sstream>
 
+#include <glm/gtc/type_ptr.hpp>
+
 namespace gfx_utils {
 
-bool CreateProgram(GLuint *out_program_id,
-                   const std::string& vert_shader_path,
-                   const std::string& frag_shader_path) {
+void Uniform::Set(bool val) {
+  glUniform1i(location_, val ? 1 : 0);
+}
 
-  *out_program_id = 0;
+void Uniform::Set(int val) {
+  glUniform1i(location_, val);
+}
 
+void Uniform::Set(float val) {
+  glUniform1f(location_, val);
+}
+
+void Uniform::Set(const glm::vec3& val) {
+  glUniform3fv(location_, 1, glm::value_ptr(val));
+}
+
+void Uniform::Set(const glm::mat3& val) {
+  glUniformMatrix3fv(location_, 1, GL_FALSE, glm::value_ptr(val));
+}
+
+void Uniform::Set(const glm::mat4& val) {
+  glUniformMatrix4fv(location_, 1, GL_FALSE, glm::value_ptr(val));
+}
+
+bool Program::CreateProgram(const std::string& vert_shader_path, 
+                            const std::string& frag_shader_path) {
   std::string vert_shader_src;
-  if (!gfx_utils::LoadShaderSource(&vert_shader_src, vert_shader_path)) {
+  if (!LoadShaderSource(&vert_shader_src, vert_shader_path)) {
     std::cerr << "Failed to find vertex shader source at "
               << vert_shader_path << std::endl;
     return false;
@@ -48,7 +71,7 @@ bool CreateProgram(GLuint *out_program_id,
   }
   
   std::string frag_shader_src;
-  if (!gfx_utils::LoadShaderSource(&frag_shader_src, frag_shader_path)) {
+  if (!LoadShaderSource(&frag_shader_src, frag_shader_path)) {
     std::cerr << "Failed to find fragment shader source at: "
       << frag_shader_path << std::endl;
     return false;
@@ -98,14 +121,33 @@ bool CreateProgram(GLuint *out_program_id,
   }
 
   glDeleteShader(frag_shader_id);
-  glDeleteShader(vert_shader_id);
+  glDeleteShader(vert_shader_id);   
 
-  *out_program_id = program_id;
+  program_id_ = program_id;
+
+  is_created_ = true;
 
   return true;
 }
 
-bool LoadShaderSource(std::string* out_str, const std::string& path) {
+void Program::DestroyProgram() {
+  assert(is_created_);
+
+  glDeleteProgram(program_id_);
+}
+
+Uniform Program::GetUniform(const std::string& var) {
+  return Uniform(glGetUniformLocation(program_id_, var.c_str()));
+}
+
+Uniform Program::GetUniform(const std::string& array, int index, 
+                            const std::string& var) {
+  std::string actual_var = array + "[" + std::to_string(index) + "]." + var;
+
+  return Uniform(glGetUniformLocation(program_id_, actual_var.c_str()));                         
+}
+
+bool Program::LoadShaderSource(std::string* out_str, const std::string& path) {
   std::ifstream shader_stream(path, std::ios::in);
 
   if (!shader_stream.is_open()) {
@@ -122,4 +164,4 @@ bool LoadShaderSource(std::string* out_str, const std::string& path) {
   return true;
 }
 
-}
+} // namespace gfx_utils

@@ -17,7 +17,7 @@
 
 #include "gfx_utils/window/window.h"
 #include "gfx_utils/window/camera.h"
-#include "gfx_utils/shader.h"
+#include "gfx_utils/program.h"
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/material.h"
 #include "gfx_utils/scene.h"
@@ -165,12 +165,12 @@ int main(int argc, char* argv[]) {
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
 
-  GLuint program_id;
-  if (!gfx_utils::CreateProgram(&program_id, vert_shader_path, 
-                                frag_shader_path)) {
+  gfx_utils::Program program;
+  if (!program.CreateProgram(vert_shader_path, frag_shader_path)) {
     exit(1);
   }
-  glUseProgram(program_id);
+  GLuint program_id = program.GetProgramId();
+  glUseProgram(program.GetProgramId());
 
   GLuint vao_id;
   glGenVertexArrays(1, &vao_id);
@@ -266,51 +266,27 @@ int main(int argc, char* argv[]) {
                                           window.GetAspectRatio(),
                                           0.1f, 10000.f);
 
-    GLint mv_mat_loc = glGetUniformLocation(program_id, "mv_mat");
-    GLint mvp_mat_loc = glGetUniformLocation(program_id, "mvp_mat");
-    GLint normal_mat_loc = glGetUniformLocation(program_id, "normal_mat");
-
-    GLint camera_pos_loc = glGetUniformLocation(program_id, "camera_pos");
-
-    glUniform3fv(camera_pos_loc, 1, glm::value_ptr(camera.GetCameraLocation()));
+    program.GetUniform("camera_pos").Set(camera.GetCameraLocation());
 
     glm::vec3 light_pos = glm::vec3(view_mat * glm::mat4(1.f) *
                                     glm::vec4(0.f, 10.f, 10.f, 1.f));
 
-    GLint light_pos_loc =
-        glGetUniformLocation(program_id, "lights[0].position"); 
-    GLint light_diffuse_intensity_loc =
-        glGetUniformLocation(program_id, "lights[0].diffuse_intensity");     
-    GLint light_specular_intensity_loc =
-        glGetUniformLocation(program_id, "lights[0].specular_intensity"); 
-
-    glUniform3fv(light_pos_loc, 1, glm::value_ptr(light_pos));
-    glUniform3fv(light_diffuse_intensity_loc, 1,
-                 glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
-    glUniform3fv(light_specular_intensity_loc, 1, 
-                 glm::value_ptr(glm::vec3(0.5f, 0.5f, 0.5f)));
+    program.GetUniform("lights", 0, "position").Set(light_pos);
+    program.GetUniform("lights", 0, "diffuse_intensity")
+           .Set(glm::vec3(0.5f, 0.5f, 0.5f));
+    program.GetUniform("lights", 0, "specular_intensity")
+           .Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
     glm::vec3 light2_pos = glm::vec3(view_mat * glm::mat4(1.f) *
                                     glm::vec4(0.f, 10.f, -10.f, 1.f));
 
-    GLint light2_pos_loc =
-        glGetUniformLocation(program_id, "lights[1].position"); 
-    GLint light2_diffuse_intensity_loc =
-        glGetUniformLocation(program_id, "lights[1].diffuse_intensity");     
-    GLint light2_specular_intensity_loc =
-        glGetUniformLocation(program_id, "lights[1].specular_intensity");  
+    program.GetUniform("lights", 1, "position").Set(light2_pos);
+    program.GetUniform("lights", 1, "diffuse_intensity")
+           .Set(glm::vec3(0.5f, 0.f, 0.f));
+    program.GetUniform("lights", 1, "specular_intensity")
+           .Set(glm::vec3(0.5f, 0.f, 0.f));                                
 
-    glUniform3fv(light2_pos_loc, 1, glm::value_ptr(light2_pos));
-    glUniform3fv(light2_diffuse_intensity_loc, 1, 
-                 glm::value_ptr(glm::vec3(0.5f, 0.f, 0.f)));
-    glUniform3fv(light2_specular_intensity_loc, 1, 
-                 glm::value_ptr(glm::vec3(0.5f, 0.f, 0.f)));
- 
-    GLint ambient_intensity_loc = 
-        glGetUniformLocation(program_id, "ambient_intensity");
-
-    glm::vec3 ambient_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
-    glUniform3fv(ambient_intensity_loc, 1, glm::value_ptr(ambient_intensity));
+    program.GetUniform("ambient_intensity").Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
     for (size_t i = 0; i < scene_objs.size(); ++i) {
       gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
@@ -323,14 +299,15 @@ int main(int argc, char* argv[]) {
         glm::mat4 model_mat = scene_obj_ptr->CalcTransform();
         glm::mat4 mv_mat = view_mat * model_mat;
         glm::mat4 mvp_mat = proj_mat * mv_mat;
-        glUniformMatrix4fv(mv_mat_loc, 1, GL_FALSE, glm::value_ptr(mv_mat));
-        glUniformMatrix4fv(mvp_mat_loc, 1, GL_FALSE, glm::value_ptr(mvp_mat));
+
+        program.GetUniform("mv_mat").Set(mv_mat);
+        program.GetUniform("mvp_mat").Set(mvp_mat);
 
         // TODO(colintan): Check that this is computing correctly
         glm::mat3 normal_mat = 
             glm::mat3(glm::transpose(glm::inverse(mv_mat)));
-        glUniformMatrix3fv(normal_mat_loc, 1, GL_FALSE, 
-                          glm::value_ptr(normal_mat));
+
+        program.GetUniform("normal_mat").Set(normal_mat);
 
         // Set the materials data in the fragment shader
 
@@ -340,83 +317,50 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < mtl_list.size(); ++i) {
           const auto& mtl = mtl_list[i];
 
-          std::string prefix = "materials[" + std::to_string(i) + "].";
-
-          GLint ambient_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "ambient_color").c_str());
-          GLint diffuse_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "diffuse_color").c_str());
-          GLint specular_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "specular_color").c_str());
-          GLint emission_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "emission_color").c_str());
-          GLint shininess_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "shininess").c_str());
-
-          glUniform3fv(ambient_loc, 1, glm::value_ptr(mtl.ambient_color));
-          glUniform3fv(diffuse_loc, 1, glm::value_ptr(mtl.diffuse_color));
-          glUniform3fv(specular_loc, 1, glm::value_ptr(mtl.specular_color));
-          glUniform3fv(emission_loc, 1, glm::value_ptr(mtl.emission_color));
-          glUniform1f(shininess_loc, mtl.shininess);
-
-          GLint has_ambient_tex_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "has_ambient_tex").c_str());
-          GLint has_diffuse_tex_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "has_diffuse_tex").c_str());
-          GLint has_specular_tex_loc = 
-              glGetUniformLocation(program_id, 
-                                   (prefix + "has_specular_tex").c_str());
-
-          GLint ambient_texture_loc =
-              glGetUniformLocation(program_id, 
-                                   (prefix + "ambient_texture").c_str());  
-          GLint diffuse_texture_loc =
-              glGetUniformLocation(program_id, 
-                                   (prefix + "diffuse_texture").c_str());  
-          GLint specular_texture_loc =
-              glGetUniformLocation(program_id, 
-                                   (prefix + "specular_texture").c_str());                                                
+          program.GetUniform("materials", i, "ambient_color")
+                 .Set(mtl.ambient_color);
+          program.GetUniform("materials", i, "diffuse_color")
+                 .Set(mtl.diffuse_color);
+          program.GetUniform("materials", i, "specular_color")
+                 .Set(mtl.specular_color);
+          program.GetUniform("materials", i, "emission_color")
+                 .Set(mtl.emission_color);
+          program.GetUniform("materials", i, "shininess")
+                 .Set(mtl.shininess);                                               
 
           if (!mtl.ambient_texname.empty()) {
-            glUniform1i(has_ambient_tex_loc, 1);
+            program.GetUniform("materials", i, "has_ambient_tex").Set(true);      
 
             // TODO(colintan): This won't work with multiple textures - the
             // texture unit will only refer to the last texture
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl.ambient_texname]);
-            glUniform1i(ambient_texture_loc, 1);
+            program.GetUniform("materials", i, "ambient_texture").Set(1);
           }
           else {
-            glUniform1i(has_ambient_tex_loc, 0);
+            program.GetUniform("materials", i, "has_ambient_tex").Set(false); 
           }
 
           if (!mtl.diffuse_texname.empty()) {
-            glUniform1i(has_diffuse_tex_loc, 1);
+            program.GetUniform("materials", i, "has_diffuse_tex").Set(true); 
 
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl.diffuse_texname]);
-            glUniform1i(diffuse_texture_loc, 2);
+            program.GetUniform("materials", i, "diffuse_texture").Set(2);
           }
           else {
-            glUniform1i(has_diffuse_tex_loc, 0);
+            program.GetUniform("materials", i, "has_diffuse_tex").Set(false); 
           }
 
           if (!mtl.specular_texname.empty()) {
-            glUniform1i(has_specular_tex_loc, 1);
+            program.GetUniform("materials", i, "has_specular_tex").Set(true); 
 
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl.specular_texname]);
-            glUniform1i(specular_texture_loc, 3);
+            program.GetUniform("materials", i, "specular_texture").Set(3);
           }
           else {
-            glUniform1i(has_specular_tex_loc, 0);
+            program.GetUniform("materials", i, "has_specular_tex").Set(false); 
           }
         }
 
@@ -477,7 +421,7 @@ int main(int argc, char* argv[]) {
 
   glDeleteVertexArrays(1, &vao_id);
 
-  glDeleteProgram(program_id);
+  program.DestroyProgram();
 
   glfwTerminate();
 
