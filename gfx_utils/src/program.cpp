@@ -147,6 +147,12 @@ Uniform Program::GetUniform(const std::string& array, int index,
   return Uniform(glGetUniformLocation(program_id_, actual_var.c_str()));                         
 }
 
+Uniform Program::GetUniform(const std::string& array, int index) {
+  std::string var = array + "[" + std::to_string(index) + "]";
+
+  return Uniform(glGetUniformLocation(program_id_, var.c_str()));                         
+}
+
 bool Program::LoadShaderSource(std::string* out_str, const std::string& path) {
   std::ifstream shader_stream(path, std::ios::in);
 

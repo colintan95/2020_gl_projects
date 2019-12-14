@@ -12,7 +12,11 @@ struct SpotLight {
 
   glm::vec3 direction;
   float cone_angle;
+
+  // To orient the camera for shadow mapping
+  glm::vec3 camera_up;
 };
+
 
 } // namespace gfx_utils
 

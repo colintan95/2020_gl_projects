@@ -41,6 +41,7 @@ public:
 
   // e.g. program.GetUniform("mvp_mat").Set(...)
   Uniform GetUniform(const std::string& var);
+  Uniform GetUniform(const std::string& array, int index);
   Uniform GetUniform(const std::string& array, int index, 
                      const std::string& var);
 

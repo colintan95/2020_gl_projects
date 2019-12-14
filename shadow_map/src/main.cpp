@@ -29,16 +29,22 @@
 // TODO(colintan): Define this somewhere else
 const float kPi = 3.14159265358979323846f;
 
+static const int kWindowWidth = 1920;
+static const int kWindowHeight = 1080;
+
 static const std::string vert_shader_path = "shaders/simple_light.vert";
 static const std::string frag_shader_path = "shaders/simple_light.frag";
 
 static const std::string cube_tex_directory = "assets/cube";
 
+static const int kShadowTexWidth = 1024;
+static const int kShadowTexHeight = 1024;
+
 int main(int argc, char* argv[]) {
 
   gfx_utils::Window window;
 
-  if (!window.Inititalize(1920, 1080, "Shadow Map")) {
+  if (!window.Inititalize(kWindowWidth, kWindowHeight, "Shadow Map")) {
     std::cerr << "Failed to initialize gfx window" << std::endl;
     exit(1);
   }
@@ -158,7 +164,7 @@ int main(int argc, char* argv[]) {
 
   // TODO(colintan): Delete this when done
   gfx_utils::Mesh frustum_mesh = 
-      gfx_utils::CreatePerspectiveFrustum(kPi / 4.f, 1.f, 5.f, 10.f);
+      gfx_utils::CreatePerspectiveFrustum(kPi / 2.f, 1.f, 2.f, 20.f);
   GLuint frustum_pos_vbo_id;
   glGenBuffers(1, &frustum_pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
   glBindBuffer(GL_ARRAY_BUFFER, frustum_pos_vbo_id);
@@ -191,7 +197,8 @@ int main(int argc, char* argv[]) {
   white_light.diffuse_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
   white_light.specular_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
   white_light.direction = glm::vec3(0.f, -1.f, 0.f);
-  white_light.cone_angle = kPi / 1.8f;
+  white_light.cone_angle = kPi / 2.f;
+  white_light.camera_up = glm::vec3(0.f, 0.f, -1.f);
   lights.push_back(&white_light);
 
   gfx_utils::SpotLight red_light;
@@ -199,7 +206,8 @@ int main(int argc, char* argv[]) {
   red_light.diffuse_intensity = glm::vec3(0.5f, 0.f, 0.f);
   red_light.specular_intensity = glm::vec3(0.5f, 0.f, 0.f);
   red_light.direction = glm::vec3(0.f, -1.f, 0.f);
-  red_light.cone_angle = kPi / 1.8f;
+  red_light.cone_angle = kPi / 2.f;
+  red_light.camera_up = glm::vec3(0.f, 0.f, -1.f);
   lights.push_back(&red_light);
           
   // Enable all necessary GL settings
@@ -306,20 +314,102 @@ int main(int argc, char* argv[]) {
   }
   glUseProgram(shadow_program.GetProgramId());
 
+  std::vector<GLuint> shadow_tex_id_list;
+  std::vector<GLuint> shadow_fbo_id_list;
+
+  for (int i = 0; i < lights.size(); ++i) {
+    gfx_utils::SpotLight* light_ptr = lights[i];
+
+    GLuint shadow_tex_id;
+    glGenTextures(1, &shadow_tex_id);
+    glBindTexture(GL_TEXTURE_2D, shadow_tex_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowTexWidth, 
+                  kShadowTexHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    shadow_tex_id_list.push_back(shadow_tex_id);
+
+    GLuint shadow_fbo_id;
+    glGenFramebuffers(1, &shadow_fbo_id);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_id);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                           shadow_tex_id, 0);
+    // TODO(colintan): Possible to remove?
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    shadow_fbo_id_list.push_back(shadow_fbo_id);
+  }
+
+  GLuint shadow_vao_id;
+  glGenVertexArrays(1, &shadow_vao_id);
+
   bool should_quit = false;
 
   while (!should_quit) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     // Shadow Pass
-    glUseProgram(shadow_program.GetProgramId());
+    for (int i = 0; i < lights.size(); ++i) {
+      gfx_utils::SpotLight* light_ptr = lights[i];
 
-    glm::mat4 light_proj_mat = glm::perspective(white_light.cone_angle, 
-                                                1.f, 0.1f, 1000.f);
-    glm::mat4 light_mvp_mat = light_proj_mat * camera.CalcViewMatrix();                                            
+      glUseProgram(shadow_program.GetProgramId());
+      glViewport(0, 0, kShadowTexWidth, kShadowTexHeight);
+
+      glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_id_list[i]);
+      glClear(GL_DEPTH_BUFFER_BIT);
+
+      glBindVertexArray(shadow_vao_id);
+
+      for (size_t i = 0; i < scene_objs.size(); ++i) {
+        gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
+
+        if (!scene_obj_ptr->HasMeshes()) {
+          continue;
+        }
+
+        for (auto mesh_ptr : scene_obj_ptr->GetMeshes()) {
+          glm::mat4 model_mat = scene_obj_ptr->CalcTransform();
+          glm::mat4 view_mat = 
+            glm::lookAt(light_ptr->position, 
+                        light_ptr->position + light_ptr->direction, 
+                        light_ptr->camera_up);
+          glm::mat4 proj_mat = glm::perspective(light_ptr->cone_angle, 
+                                                1.f, 5.f, 30.f);
+          glm::mat4 mvp_mat = proj_mat * view_mat * model_mat; 
+
+          shadow_program.GetUniform("mvp_mat").Set(mvp_mat);
+
+          int mesh_idx = mesh_to_idx_map[mesh_ptr];
+
+          glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[mesh_idx]);
+          glEnableVertexAttribArray(0);
+          glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+          glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[mesh_idx]);
+          glDrawElements(GL_TRIANGLES, mesh_ptr->num_verts, GL_UNSIGNED_INT,
+              (void*)0);
+        }    
+      }
+
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    glBindVertexArray(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);                                       
 
     // Light Pass
     glUseProgram(program.GetProgramId());
+    glViewport(0, 0, kWindowWidth, kWindowHeight);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 view_mat = camera.CalcViewMatrix();
     glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 
@@ -426,6 +516,46 @@ int main(int argc, char* argv[]) {
           }
         }
 
+        for (int i = 0; i < lights.size(); ++i) {
+          gfx_utils::SpotLight* light_ptr = lights[i];
+
+          program.GetUniform("lights", i, "is_active").Set(1);
+
+          // Position of light in modelview space
+          glm::vec3 pos_mv = 
+              glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
+          glm::vec3 dir_mv = 
+              glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) * 
+                        light_ptr->direction);
+
+          program.GetUniform("lights", i, "position_mv").Set(pos_mv);
+          program.GetUniform("lights", i, "diffuse_intensity")
+                .Set(light_ptr->diffuse_intensity);
+          program.GetUniform("lights", i, "specular_intensity")
+                .Set(light_ptr->specular_intensity);
+          program.GetUniform("lights", i, "direction_mv").Set(dir_mv);
+          program.GetUniform("lights", i, "cone_angle")
+                .Set(light_ptr->cone_angle);
+
+          // // TODO(colintan): Don't hardcode this
+          glActiveTexture(GL_TEXTURE10 + i);    
+          glBindTexture(GL_TEXTURE_2D, shadow_tex_id_list[i]);
+
+          program.GetUniform("lights", i, "shadow_tex").Set(10 + i); 
+
+          glm::mat4 light_view_mat = 
+            glm::lookAt(light_ptr->position, 
+                        light_ptr->position + light_ptr->direction, 
+                        light_ptr->camera_up);
+          glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle, 
+                                                      1.f, 5.f, 30.f);
+
+          glm::mat4 shadow_mat = light_proj_mat * light_view_mat * 
+              model_mat;
+
+          program.GetUniform("shadow_mats", i).Set(shadow_mat);      
+        }    
+
         // Set vertex attributes
 
         glBindVertexArray(vao_id);
@@ -462,7 +592,9 @@ int main(int argc, char* argv[]) {
     glBindVertexArray(0);
 
     glm::mat4 frustum_model_mat = 
-         glm::translate(glm::mat4(1.f), white_light.position);
+         glm::inverse(glm::lookAt(red_light.position, 
+                                  red_light.position + red_light.direction, 
+                                  red_light.camera_up));
     wireframe_drawer.Draw(&frustum_mesh, frustum_pos_vbo_id, frustum_ibo_id, 
                           proj_mat * view_mat * frustum_model_mat);
 
@@ -474,13 +606,21 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  glDeleteVertexArrays(1, &shadow_vao_id);
+  glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list.size()), 
+                       &shadow_fbo_id_list[0]);
+  glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list.size()), 
+                   &shadow_tex_id_list[0]);
+
   for (auto it = texture_id_map.begin(); it != texture_id_map.end(); ++it) {
     glDeleteTextures(1, &it->second);
   }
 
   glDeleteBuffers(static_cast<GLsizei>(ibo_id_list.size()), &ibo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(texcoord_vbo_id_list.size()), &texcoord_vbo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list.size()), &mtl_vbo_id_list[0]);
+  glDeleteBuffers(static_cast<GLsizei>(texcoord_vbo_id_list.size()), 
+                  &texcoord_vbo_id_list[0]);
+  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list.size()), 
+                  &mtl_vbo_id_list[0]);
   glDeleteBuffers(static_cast<GLsizei>(normal_vbo_id_list.size()), 
       &normal_vbo_id_list[0]);
   glDeleteBuffers(static_cast<GLsizei>(pos_vbo_id_list.size()), 

@@ -10,9 +10,13 @@ out vec3 frag_normal;
 out vec2 frag_texcoord;
 flat out uint frag_mtl_id;
 
+out vec4 frag_shadow_coords[5]; // one for each light
+
 uniform mat4 mv_mat;
 uniform mat4 mvp_mat;
 uniform mat3 normal_mat;
+
+uniform mat4 shadow_mats[5]; // proj * view matrices from the light's viewpoint
 
 void main() {
   gl_Position = mvp_mat * vec4(vert_pos, 1.0);
@@ -21,4 +25,8 @@ void main() {
   frag_normal = normal_mat * vert_normal;
   frag_texcoord = vert_texcoord;
   frag_mtl_id = vert_mtl_id;
+
+  for (int i = 0; i < 5; ++i) {
+    frag_shadow_coords[i] = shadow_mats[i] * vec4(vert_pos, 1.0);
+  }
 }
