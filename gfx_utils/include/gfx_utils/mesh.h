@@ -14,7 +14,11 @@ namespace gfx_utils {
 
 const glm::vec3 kDefaultMeshColor = {0.5f, 0.5f, 0.5f};
 
+using MeshId = uint64_t;
+
 struct Mesh {
+  MeshId id; // Assigned on construction
+
   std::vector<glm::vec3> pos_data;
   std::vector<glm::vec3> normal_data;
   std::vector<glm::vec2> texcoord_data;
@@ -29,7 +33,12 @@ struct Mesh {
 
   bool is_textured = false;
   glm::vec3 color = kDefaultMeshColor;
+
+  // Constructor to assign the id
+  Mesh();
 };
+
+using MeshList = std::vector<std::shared_ptr<Mesh>>;
 
 bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes, 
                           const std::string& mtl_directory,

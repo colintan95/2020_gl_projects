@@ -38,6 +38,8 @@ set(GLM_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm/include")
 set(STB_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/include")
+set(JSON_INCLUDE_DIRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 
 # Library that contains utils commonly used in the projects
 # NOTE: Must be added before any of the graphics projects so that the projects

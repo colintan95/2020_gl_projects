@@ -1,0 +1,15 @@
+{
+  "models": [
+    {
+      "name": "cube",
+      "file": "assets/cube/cube.obj",
+      "mtl_dir": "assets/cube"
+    }
+  ],
+  "entities": [
+    {
+      "name": "cube",
+      "model": "cube"
+    }
+  ]
+}

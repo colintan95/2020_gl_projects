@@ -1,4 +1,4 @@
-#include "gfx_utils/scene.h"
+#include "gfx_utils/entity.h"
 
 #include <cassert>
 
@@ -8,16 +8,7 @@
 
 namespace gfx_utils {
 
-SceneObject::SceneObject(glm::vec3 location, glm::vec3 scale, float yaw, 
-                         float pitch, float roll) {
-  parent_ = nullptr;
-
-  location_ = location;
-  scale_ = scale;
-  rotation_ = glm::quat(glm::vec3(pitch, yaw, roll));                             
-}
-
-SceneObject::SceneObject() {
+Entity::Entity() {
   parent_ = nullptr;
   
   location_ = glm::vec3(0.f, 0.f, 0.f);
@@ -25,7 +16,7 @@ SceneObject::SceneObject() {
   rotation_ = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 }
 
-glm::mat4 SceneObject::CalcTransform() const {
+glm::mat4 Entity::CalcTransform() const {
   glm::mat4 model_mat = glm::translate(glm::mat4(1.f), location_) *
                         glm::mat4_cast(rotation_) *
                         glm::scale(scale_);
@@ -39,12 +30,33 @@ glm::mat4 SceneObject::CalcTransform() const {
   return model_mat;
 }
 
-void SceneObject::AddMeshList(std::shared_ptr<MeshList> mesh_list) {
-  meshes_ = mesh_list;
+void Entity::SetParent(std::shared_ptr<Entity> parent) {
+  parent_ = parent;
 }
 
-void SceneObject::SetParent(SceneObject* parent) {
-  parent_ = parent;
+void Entity::SetModel(std::shared_ptr<Model> model) {
+  model_ = model;
+}
+
+void Entity::SetLocation(glm::vec3 location) {
+  location_ = location;
+}
+
+void Entity::SetScale(glm::vec3 scale) {
+  scale_ = scale;
+}
+
+void Entity::SetRotation(float yaw, float pitch, float roll) {
+  rotation_ = glm::quat(glm::vec3(pitch, yaw, roll));    
+}
+
+std::shared_ptr<Model> Entity::GetModel() { 
+  assert(model_ != nullptr);
+  return model_;
+}
+
+bool Entity::HasModel() const {
+  return model_ != nullptr;
 }
 
 } // namespace gfx_utils

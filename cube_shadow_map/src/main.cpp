@@ -21,7 +21,7 @@
 #include "gfx_utils/program.h"
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/material.h"
-#include "gfx_utils/scene.h"
+#include "gfx_utils/entity.h"
 #include "gfx_utils/texture.h"
 #include "gfx_utils/primitives.h"
 #include "gfx_utils/lights.h"

@@ -20,11 +20,12 @@
 #include "gfx_utils/program.h"
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/material.h"
-#include "gfx_utils/scene.h"
+#include "gfx_utils/entity.h"
 #include "gfx_utils/texture.h"
 #include "gfx_utils/primitives.h"
 #include "gfx_utils/lights.h"
 #include "gfx_utils/debug/wireframe_drawer.h"
+#include "gfx_utils/resources/resource_manager.h"
 
 // TODO(colintan): Define this somewhere else
 const float kPi = 3.14159265358979323846f;
@@ -40,154 +41,160 @@ static const std::string cube_tex_directory = "assets/cube";
 static const int kShadowTexWidth = 1024;
 static const int kShadowTexHeight = 1024;
 
+gfx_utils::Window window;
+gfx_utils::Camera camera;
+gfx_utils::ResourceManager resource_manager;
+gfx_utils::Program program;
+
 int main(int argc, char* argv[]) {
-
-  gfx_utils::Window window;
-
   if (!window.Inititalize(kWindowWidth, kWindowHeight, "Shadow Map")) {
     std::cerr << "Failed to initialize gfx window" << std::endl;
     exit(1);
   }
-
-  gfx_utils::Camera camera;
 
   if (!camera.Initialize(&window)) {
     std::cerr << "Failed to initialize camera" << std::endl;
     exit(1);
   }
 
-  gfx_utils::WireframeDrawer wireframe_drawer;
+  // gfx_utils::WireframeDrawer wireframe_drawer;
 
-  if (!wireframe_drawer.Initialize()) {
-    std::cerr << "Failed to initialize wireframe drawer" << std::endl;
-    exit(1);
-  }
-
-  std::vector<gfx_utils::Mesh*> meshes;
-
-  // Create wall mesh
-  gfx_utils::Mesh wall = 
-      gfx_utils::CreatePlane(glm::vec3(-10.f,  10.f, 0.f),
-                             glm::vec3(-10.f, -10.f, 0.f),
-                             glm::vec3( 10.f, -10.f, 0.f),
-                             glm::vec3( 10.f,  10.f, 0.f));
-  wall.mtl_id_data = {0, 0, 0, 0, 0, 0};
-  gfx_utils::Material wall_mtl;
-  wall_mtl.ambient_color  = glm::vec3(0.5f, 0.5f, 0.5f);
-  wall_mtl.diffuse_color  = glm::vec3(0.5f, 0.5f, 0.5f);
-  wall_mtl.specular_color = glm::vec3(0.5f, 0.5f, 0.5f);
-  wall_mtl.emission_color = glm::vec3(0.f, 0.f, 0.f);
-  wall_mtl.shininess = 10;
-  wall.material_list.push_back(std::move(wall_mtl));
-  meshes.push_back(&wall);
-
-  // // Create F16 mesh
-  // std::vector<gfx_utils::Mesh> f16_meshes;
-  // if (!gfx_utils::CreateMeshesFromFile(&f16_meshes, "assets/models/f-16.obj")) {
-  //   std::cerr << "Failed to load f16 mesh" << std::endl;
+  // if (!wireframe_drawer.Initialize()) {
+  //   std::cerr << "Failed to initialize wireframe drawer" << std::endl;
   //   exit(1);
   // }
-  // for (auto& mesh : f16_meshes) {
-  //   meshes.push_back(&mesh);
+
+  // std::vector<gfx_utils::Mesh*> meshes;
+
+  // // Create wall mesh
+  // gfx_utils::Mesh wall =
+  //     gfx_utils::CreatePlane(glm::vec3(-10.f,  10.f, 0.f),
+  //                            glm::vec3(-10.f, -10.f, 0.f),
+  //                            glm::vec3( 10.f, -10.f, 0.f),
+  //                            glm::vec3( 10.f,  10.f, 0.f));
+  // wall.mtl_id_data = {0, 0, 0, 0, 0, 0};
+  // gfx_utils::Material wall_mtl;
+  // wall_mtl.ambient_color  = glm::vec3(0.5f, 0.5f, 0.5f);
+  // wall_mtl.diffuse_color  = glm::vec3(0.5f, 0.5f, 0.5f);
+  // wall_mtl.specular_color = glm::vec3(0.5f, 0.5f, 0.5f);
+  // wall_mtl.emission_color = glm::vec3(0.f, 0.f, 0.f);
+  // wall_mtl.shininess = 10;
+  // wall.material_list.push_back(std::move(wall_mtl));
+  // meshes.push_back(&wall);
+
+  // // // Create F16 mesh
+  // // std::vector<gfx_utils::Mesh> f16_meshes;
+  // // if (!gfx_utils::CreateMeshesFromFile(&f16_meshes, "assets/models/f-16.obj")) {
+  // //   std::cerr << "Failed to load f16 mesh" << std::endl;
+  // //   exit(1);
+  // // }
+  // // for (auto& mesh : f16_meshes) {
+  // //   meshes.push_back(&mesh);
+  // // }
+
+  // std::vector<gfx_utils::SceneObject*> scene_objs;
+
+  // std::vector<gfx_utils::SceneObject> room_children_objs;
+
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(0.f, 0.f, -40.f),
+  //                           glm::vec3(2.f, 1.f, 1.f),
+  //                           0.f, 0.f, 0.f)); // Front wall
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(0.f, 0.f, 40.f),
+  //                            glm::vec3(2.f, 1.f, 1.f),
+  //                            kPi, 0.f, 0.f)); // Back wall
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(-20.f, 0.f, 0.f),
+  //                            glm::vec3(4.f, 1.f, 1.f),
+  //                            0.5f * kPi, 0.f, 0.f)); // Left wall
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(20.f, 0.f, 0.f),
+  //                            glm::vec3(4.f, 1.f, 1.f),
+  //                            -0.5f * kPi, 0.f, 0.f)); // Right wall
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(0.f, 10.f, 0.f),
+  //                            glm::vec3(2.f, 4.f, 1.f),
+  //                            0.f, 0.5f * kPi, 0.f)); // Ceiling
+  // room_children_objs.push_back(
+  //     gfx_utils::SceneObject(glm::vec3(0.f, -10.f, 0.f),
+  //                            glm::vec3(2.f, 4.f, 1.f),
+  //                            0.f, -0.5f * kPi, 0.f)); // Floor
+  // // TODO(colintan): Think of a better way to do this
+  // for (auto& obj : room_children_objs) {
+  //   obj.AddMesh(&wall);
   // }
 
-  std::vector<gfx_utils::SceneObject*> scene_objs;
-
-  std::vector<gfx_utils::SceneObject> room_children_objs;
-
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(0.f, 0.f, -40.f),
-                            glm::vec3(2.f, 1.f, 1.f), 
-                            0.f, 0.f, 0.f)); // Front wall
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(0.f, 0.f, 40.f),
-                             glm::vec3(2.f, 1.f, 1.f), 
-                             kPi, 0.f, 0.f)); // Back wall
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(-20.f, 0.f, 0.f),
-                             glm::vec3(4.f, 1.f, 1.f), 
-                             0.5f * kPi, 0.f, 0.f)); // Left wall
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(20.f, 0.f, 0.f),
-                             glm::vec3(4.f, 1.f, 1.f), 
-                             -0.5f * kPi, 0.f, 0.f)); // Right wall
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(0.f, 10.f, 0.f),
-                             glm::vec3(2.f, 4.f, 1.f), 
-                             0.f, 0.5f * kPi, 0.f)); // Ceiling
-  room_children_objs.push_back(
-      gfx_utils::SceneObject(glm::vec3(0.f, -10.f, 0.f),
-                             glm::vec3(2.f, 4.f, 1.f), 
-                             0.f, -0.5f * kPi, 0.f)); // Floor  
-  // TODO(colintan): Think of a better way to do this
-  for (auto& obj : room_children_objs) {
-    obj.AddMesh(&wall);
-  }
-
-  // Room is a meshless scene object that has the walls, ceiling and floor
-  // as its children - so we can transform the whole room as a single object                           
-  gfx_utils::SceneObject room_obj(glm::vec3(0.f, 5.f, 0.f),
-                                  glm::vec3(1.f, 1.f, 1.f),
-                                  0.f, 0.f, 0.f);
-  for (auto& obj : room_children_objs) {
-    obj.SetParent(&room_obj);
-  }
-
-  for (auto& obj : room_children_objs) {
-    scene_objs.push_back(&obj);
-  }
-  scene_objs.push_back(&room_obj);
-
-  // // Create SceneObject for the F16
-  // gfx_utils::SceneObject f16_obj;
-  // for (auto& mesh : f16_meshes) {
-  //   f16_obj.AddMesh(&mesh);
+  // // Room is a meshless scene object that has the walls, ceiling and floor
+  // // as its children - so we can transform the whole room as a single object
+  // gfx_utils::SceneObject room_obj(glm::vec3(0.f, 5.f, 0.f),
+  //                                 glm::vec3(1.f, 1.f, 1.f),
+  //                                 0.f, 0.f, 0.f);
+  // for (auto& obj : room_children_objs) {
+  //   obj.SetParent(&room_obj);
   // }
-  // f16_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
-  // scene_objs.push_back(&f16_obj);
 
-  // Initialize mesh and texture for Cube
+  // for (auto& obj : room_children_objs) {
+  //   scene_objs.push_back(&obj);
+  // }
+  // scene_objs.push_back(&room_obj);
 
-  // TODO(colintan): How to get a single mesh, not having to pass in a vector
-  std::vector<gfx_utils::Mesh> cube_meshes;
-  if (!gfx_utils::CreateMeshesFromFile(&cube_meshes, "assets/cube", 
-                                       "assets/cube/cube.obj")) {
-    std::cerr << "Failed to load cube mesh" << std::endl;
-    exit(1);
-  }
-  meshes.push_back(&cube_meshes[0]);
+  // // // Create SceneObject for the F16
+  // // gfx_utils::SceneObject f16_obj;
+  // // for (auto& mesh : f16_meshes) {
+  // //   f16_obj.AddMesh(&mesh);
+  // // }
+  // // f16_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
+  // // scene_objs.push_back(&f16_obj);
 
-  gfx_utils::SceneObject cube_obj;
-  cube_obj.AddMesh(&cube_meshes[0]);
-  cube_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
-  scene_objs.push_back(&cube_obj);
+  // // Initialize mesh and texture for Cube
 
-  // TODO(colintan): Delete this when done
-  gfx_utils::Mesh frustum_mesh = 
-      gfx_utils::CreatePerspectiveFrustum(kPi / 2.f, 1.f, 2.f, 20.f);
-  GLuint frustum_pos_vbo_id;
-  glGenBuffers(1, &frustum_pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
-  glBindBuffer(GL_ARRAY_BUFFER, frustum_pos_vbo_id);
-  glBufferData(GL_ARRAY_BUFFER, frustum_mesh.pos_data.size() * 3 * sizeof(float),
-                &frustum_mesh.pos_data[0], GL_STATIC_DRAW);
-  GLuint frustum_ibo_id;
-  glGenBuffers(1, &frustum_ibo_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frustum_ibo_id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                frustum_mesh.index_data.size() * sizeof(uint32_t),
-                &frustum_mesh.index_data[0], GL_STATIC_DRAW);
+  // // TODO(colintan): How to get a single mesh, not having to pass in a vector
+  // std::vector<gfx_utils::Mesh> cube_meshes;
+  // if (!gfx_utils::CreateMeshesFromFile(&cube_meshes, "assets/cube",
+  //                                      "assets/cube/cube.obj")) {
+  //   std::cerr << "Failed to load cube mesh" << std::endl;
+  //   exit(1);
+  // }
+  // meshes.push_back(&cube_meshes[0]);
 
-  std::unordered_map<std::string, gfx_utils::Texture> texture_data_map;
+  // gfx_utils::SceneObject cube_obj;
+  // cube_obj.AddMesh(&cube_meshes[0]);
+  // cube_obj.SetScale(glm::vec3(5.f, 5.f, 5.f));
+  // scene_objs.push_back(&cube_obj);
 
-  // Load Cube texture
-  gfx_utils::Material& cube_mtl = cube_meshes[0].material_list[0];
-  texture_data_map[cube_mtl.diffuse_texname] = gfx_utils::Texture();
-  if (!gfx_utils::CreateTextureFromFile(
-          &texture_data_map[cube_mtl.diffuse_texname], cube_tex_directory,
-          cube_meshes[0].material_list[0].diffuse_texname)) {
-    std::cerr << "Failed to load cube texture" << std::endl;
-    exit(1);        
-  }
+  // // TODO(colintan): Delete this when done
+  // gfx_utils::Mesh frustum_mesh =
+  //     gfx_utils::CreatePerspectiveFrustum(kPi / 2.f, 1.f, 2.f, 20.f);
+  // GLuint frustum_pos_vbo_id;
+  // glGenBuffers(1, &frustum_pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
+  // glBindBuffer(GL_ARRAY_BUFFER, frustum_pos_vbo_id);
+  // glBufferData(GL_ARRAY_BUFFER, frustum_mesh.pos_data.size() * 3 * sizeof(float),
+  //               &frustum_mesh.pos_data[0], GL_STATIC_DRAW);
+  // GLuint frustum_ibo_id;
+  // glGenBuffers(1, &frustum_ibo_id);
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, frustum_ibo_id);
+  // glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+  //               frustum_mesh.index_data.size() * sizeof(uint32_t),
+  //               &frustum_mesh.index_data[0], GL_STATIC_DRAW);
+
+  
+  resource_manager.LoadResourcesFromJson("assets/resources.json");
+
+  const auto& models = resource_manager.GetModels();
+  const auto& entities = resource_manager.GetEntities();
+
+  // std::unordered_map<std::string, gfx_utils::Texture> texture_data_map;
+
+  // // Load Cube texture
+  // gfx_utils::Material& cube_mtl = cube_meshes[0].material_list[0];
+  // texture_data_map[cube_mtl.diffuse_texname] = gfx_utils::Texture();
+  // if (!gfx_utils::CreateTextureFromFile(
+  //         &texture_data_map[cube_mtl.diffuse_texname], cube_tex_directory,
+  //         cube_meshes[0].material_list[0].diffuse_texname)) {
+  //   std::cerr << "Failed to load cube texture" << std::endl;
+  //   exit(1);
+  // }
 
   // Create Lights
   std::vector<gfx_utils::SpotLight*> lights;
@@ -209,14 +216,13 @@ int main(int argc, char* argv[]) {
   red_light.cone_angle = kPi / 2.f;
   red_light.camera_up = glm::vec3(0.f, 0.f, -1.f);
   lights.push_back(&red_light);
-          
+
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
 
-  gfx_utils::Program program;
   if (!program.CreateProgram(vert_shader_path, frag_shader_path)) {
     std::cerr << "Could not create light pass program." << std::endl;
     exit(1);
@@ -232,61 +238,65 @@ int main(int argc, char* argv[]) {
   std::vector<GLuint> mtl_vbo_id_list;
   std::vector<GLuint> ibo_id_list;
 
-  // TODO(colintan): Is this a good solution?
-  // Maps a mesh to the index in the buffers that contain the mesh's data
-  std::unordered_map<const gfx_utils::Mesh*, int> mesh_to_idx_map;
+  std::unordered_map<gfx_utils::MeshId, int> mesh_to_idx_map;
 
-  for (auto mesh_ptr : meshes) {
-    mesh_to_idx_map[mesh_ptr] = static_cast<int>(ibo_id_list.size());
+  for (auto model_ptr : models) {
+    for (gfx_utils::Mesh& mesh : model_ptr->meshes) {
+      gfx_utils::MeshId id = mesh.id;
 
-    GLuint pos_vbo_id;
-    glGenBuffers(1, &pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
-    glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, mesh_ptr->pos_data.size() * 3 * sizeof(float),
-                 &mesh_ptr->pos_data[0], GL_STATIC_DRAW);
-    pos_vbo_id_list.push_back(pos_vbo_id);
+      mesh_to_idx_map[id] = static_cast<int>(ibo_id_list.size());
 
-    GLuint normal_vbo_id;
-    glGenBuffers(1, &normal_vbo_id);
-    glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, mesh_ptr->normal_data.size() * 3 * sizeof(float),
-                 &mesh_ptr->normal_data[0], GL_STATIC_DRAW);
-    normal_vbo_id_list.push_back(normal_vbo_id);
+      GLuint pos_vbo_id;
+      glGenBuffers(1, &pos_vbo_id); // TODO(colintan): Is bulk allocating faster?
+      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
+      glBufferData(GL_ARRAY_BUFFER, mesh.pos_data.size() * 3 * sizeof(float),
+                  &mesh.pos_data[0], GL_STATIC_DRAW);
+      pos_vbo_id_list.push_back(pos_vbo_id);
 
-    GLuint texcoord_vbo_id;
-    glGenBuffers(1, &texcoord_vbo_id);
-    glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
-    glBufferData(GL_ARRAY_BUFFER, mesh_ptr->texcoord_data.size() * 2 * sizeof(float),
-                 &mesh_ptr->texcoord_data[0], GL_STATIC_DRAW);
-    texcoord_vbo_id_list.push_back(texcoord_vbo_id);
+      GLuint normal_vbo_id;
+      glGenBuffers(1, &normal_vbo_id);
+      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id);
+      glBufferData(GL_ARRAY_BUFFER, mesh.normal_data.size() * 3 * sizeof(float),
+                  &mesh.normal_data[0], GL_STATIC_DRAW);
+      normal_vbo_id_list.push_back(normal_vbo_id);
 
-    if (mesh_ptr->material_list.size() != 0) {
-      GLuint mtl_vbo_id;
-      glGenBuffers(1, &mtl_vbo_id);
-      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
-      glBufferData(GL_ARRAY_BUFFER, 
-                   mesh_ptr->mtl_id_data.size() * sizeof(unsigned int), 
-                   &mesh_ptr->mtl_id_data[0], GL_STATIC_DRAW);
-      mtl_vbo_id_list.push_back(mtl_vbo_id);
+      GLuint texcoord_vbo_id;
+      glGenBuffers(1, &texcoord_vbo_id);
+      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
+      glBufferData(GL_ARRAY_BUFFER, mesh.texcoord_data.size() * 2 * sizeof(float),
+                  &mesh.texcoord_data[0], GL_STATIC_DRAW);
+      texcoord_vbo_id_list.push_back(texcoord_vbo_id);
+
+      if (mesh.material_list.size() != 0) {
+        GLuint mtl_vbo_id;
+        glGenBuffers(1, &mtl_vbo_id);
+        glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
+        glBufferData(GL_ARRAY_BUFFER,
+                    mesh.mtl_id_data.size() * sizeof(unsigned int),
+                    &mesh.mtl_id_data[0], GL_STATIC_DRAW);
+        mtl_vbo_id_list.push_back(mtl_vbo_id);
+      }
+      else {
+        mtl_vbo_id_list.push_back(0);
+      }
+
+      GLuint ibo_id;
+      glGenBuffers(1, &ibo_id);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                   mesh.index_data.size() * sizeof(uint32_t),
+                   &mesh.index_data[0], GL_STATIC_DRAW);
+      ibo_id_list.push_back(ibo_id);
     }
-    else {
-      mtl_vbo_id_list.push_back(0);
-    }
-
-    GLuint ibo_id;
-    glGenBuffers(1, &ibo_id);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 mesh_ptr->index_data.size() * sizeof(uint32_t),
-                 &mesh_ptr->index_data[0], GL_STATIC_DRAW);
-    ibo_id_list.push_back(ibo_id);
   }
 
   std::unordered_map<std::string, GLuint> texture_id_map;
 
-  for (auto it = texture_data_map.begin(); it != texture_data_map.end(); ++it) {
+  auto& texture_name_map = resource_manager.GetTextureNameMap();
+
+  for (auto it = texture_name_map.begin(); it != texture_name_map.end(); ++it) {
     const std::string& texname = it->first;
-    const gfx_utils::Texture& texture = it->second;
+    const auto& texture = it->second;
 
     GLuint texture_id;
     glGenTextures(1, &texture_id);
@@ -295,11 +305,11 @@ int main(int argc, char* argv[]) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    GLenum format = texture.has_alpha ? GL_RGBA : GL_RGB;
-    glTexImage2D(GL_TEXTURE_2D, 0, format, texture.tex_width, 
-                 texture.tex_height, 0, format, GL_UNSIGNED_BYTE, 
-                 &texture.tex_data[0]);
+
+    GLenum format = texture->has_alpha ? GL_RGBA : GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, texture->tex_width,
+                 texture->tex_height, 0, format, GL_UNSIGNED_BYTE,
+                 &texture->tex_data[0]);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -323,7 +333,7 @@ int main(int argc, char* argv[]) {
     GLuint shadow_tex_id;
     glGenTextures(1, &shadow_tex_id);
     glBindTexture(GL_TEXTURE_2D, shadow_tex_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowTexWidth, 
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowTexWidth,
                   kShadowTexHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -367,35 +377,33 @@ int main(int argc, char* argv[]) {
 
       glBindVertexArray(shadow_vao_id);
 
-      for (size_t i = 0; i < scene_objs.size(); ++i) {
-        gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
-
-        if (!scene_obj_ptr->HasMeshes()) {
+      for (auto entity_ptr : entities) {
+        if (!entity_ptr->HasModel()) {
           continue;
         }
 
-        for (auto mesh_ptr : scene_obj_ptr->GetMeshes()) {
-          glm::mat4 model_mat = scene_obj_ptr->CalcTransform();
+        for (auto mesh: entity_ptr->GetModel()->meshes) {
+          glm::mat4 model_mat = entity_ptr->CalcTransform();
           glm::mat4 view_mat = 
-            glm::lookAt(light_ptr->position, 
-                        light_ptr->position + light_ptr->direction, 
-                        light_ptr->camera_up);
-          glm::mat4 proj_mat = glm::perspective(light_ptr->cone_angle, 
+              glm::lookAt(light_ptr->position,
+                          light_ptr->position + light_ptr->direction,
+                          light_ptr->camera_up);
+          glm::mat4 proj_mat = glm::perspective(light_ptr->cone_angle,
                                                 1.f, 5.f, 30.f);
-          glm::mat4 mvp_mat = proj_mat * view_mat * model_mat; 
+          glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
 
           shadow_program.GetUniform("mvp_mat").Set(mvp_mat);
 
-          int mesh_idx = mesh_to_idx_map[mesh_ptr];
+          int mesh_idx = mesh_to_idx_map[mesh.id];
 
           glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[mesh_idx]);
           glEnableVertexAttribArray(0);
           glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
           glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[mesh_idx]);
-          glDrawElements(GL_TRIANGLES, mesh_ptr->num_verts, GL_UNSIGNED_INT,
-              (void*)0);
-        }    
+          glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
+                         (void*)0);
+        }
       }
 
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -403,7 +411,7 @@ int main(int argc, char* argv[]) {
 
     glBindVertexArray(0);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);                                       
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     // Light Pass
     glUseProgram(program.GetProgramId());
@@ -412,7 +420,7 @@ int main(int argc, char* argv[]) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 view_mat = camera.CalcViewMatrix();
-    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f), 
+    glm::mat4 proj_mat = glm::perspective(glm::radians(30.f),
                                           window.GetAspectRatio(),
                                           0.1f, 1000.f);
 
@@ -422,10 +430,10 @@ int main(int argc, char* argv[]) {
       gfx_utils::SpotLight* light_ptr = lights[i];
 
       // Position of light in modelview space
-      glm::vec3 pos_mv = 
+      glm::vec3 pos_mv =
           glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
-      glm::vec3 dir_mv = 
-          glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) * 
+      glm::vec3 dir_mv =
+          glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
                     light_ptr->direction);
 
       program.GetUniform("lights", i, "position_mv").Set(pos_mv);
@@ -436,19 +444,17 @@ int main(int argc, char* argv[]) {
       program.GetUniform("lights", i, "direction_mv").Set(dir_mv);
       program.GetUniform("lights", i, "cone_angle")
              .Set(light_ptr->cone_angle);
-    }                  
+    }
 
     program.GetUniform("ambient_intensity").Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
-    for (size_t i = 0; i < scene_objs.size(); ++i) {
-      gfx_utils::SceneObject *scene_obj_ptr = scene_objs[i];
-
-      if (!scene_obj_ptr->HasMeshes()) {
+    for (auto entity_ptr : entities) {
+      if (!entity_ptr->HasModel()) {
         continue;
       }
 
-      for (auto mesh_ptr : scene_obj_ptr->GetMeshes()) {
-        glm::mat4 model_mat = scene_obj_ptr->CalcTransform();
+      for (auto& mesh : entity_ptr->GetModel()->meshes) {
+        glm::mat4 model_mat = entity_ptr->CalcTransform();
         glm::mat4 mv_mat = view_mat * model_mat;
         glm::mat4 mvp_mat = proj_mat * mv_mat;
 
@@ -456,7 +462,7 @@ int main(int argc, char* argv[]) {
         program.GetUniform("mvp_mat").Set(mvp_mat);
 
         // TODO(colintan): Check that this is computing correctly
-        glm::mat3 normal_mat = 
+        glm::mat3 normal_mat =
             glm::mat3(glm::transpose(glm::inverse(mv_mat)));
 
         program.GetUniform("normal_mat").Set(normal_mat);
@@ -465,7 +471,7 @@ int main(int argc, char* argv[]) {
 
         // TODO(colintan): Modify this so that we can render a mesh that has
         // multiple materials
-        const auto& mtl_list = mesh_ptr->material_list;
+        const auto& mtl_list = mesh.material_list;
         for (int i = 0; i < mtl_list.size(); ++i) {
           const auto& mtl = mtl_list[i];
 
@@ -478,10 +484,10 @@ int main(int argc, char* argv[]) {
           program.GetUniform("materials", i, "emission_color")
                  .Set(mtl.emission_color);
           program.GetUniform("materials", i, "shininess")
-                 .Set(mtl.shininess);                                               
+                 .Set(mtl.shininess);
 
           if (!mtl.ambient_texname.empty()) {
-            program.GetUniform("materials", i, "has_ambient_tex").Set(true);      
+            program.GetUniform("materials", i, "has_ambient_tex").Set(true);
 
             // TODO(colintan): This won't work with multiple textures - the
             // texture unit will only refer to the last texture
@@ -490,29 +496,29 @@ int main(int argc, char* argv[]) {
             program.GetUniform("materials", i, "ambient_texture").Set(1);
           }
           else {
-            program.GetUniform("materials", i, "has_ambient_tex").Set(false); 
+            program.GetUniform("materials", i, "has_ambient_tex").Set(false);
           }
 
           if (!mtl.diffuse_texname.empty()) {
-            program.GetUniform("materials", i, "has_diffuse_tex").Set(true); 
+            program.GetUniform("materials", i, "has_diffuse_tex").Set(true);
 
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl.diffuse_texname]);
             program.GetUniform("materials", i, "diffuse_texture").Set(2);
           }
           else {
-            program.GetUniform("materials", i, "has_diffuse_tex").Set(false); 
+            program.GetUniform("materials", i, "has_diffuse_tex").Set(false);
           }
 
           if (!mtl.specular_texname.empty()) {
-            program.GetUniform("materials", i, "has_specular_tex").Set(true); 
+            program.GetUniform("materials", i, "has_specular_tex").Set(true);
 
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, texture_id_map[mtl.specular_texname]);
             program.GetUniform("materials", i, "specular_texture").Set(3);
           }
           else {
-            program.GetUniform("materials", i, "has_specular_tex").Set(false); 
+            program.GetUniform("materials", i, "has_specular_tex").Set(false);
           }
         }
 
@@ -522,10 +528,10 @@ int main(int argc, char* argv[]) {
           program.GetUniform("lights", i, "is_active").Set(1);
 
           // Position of light in modelview space
-          glm::vec3 pos_mv = 
+          glm::vec3 pos_mv =
               glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
-          glm::vec3 dir_mv = 
-              glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) * 
+          glm::vec3 dir_mv =
+              glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
                         light_ptr->direction);
 
           program.GetUniform("lights", i, "position_mv").Set(pos_mv);
@@ -538,29 +544,31 @@ int main(int argc, char* argv[]) {
                 .Set(light_ptr->cone_angle);
 
           // // TODO(colintan): Don't hardcode this
-          glActiveTexture(GL_TEXTURE10 + i);    
+          glActiveTexture(GL_TEXTURE10 + i);
           glBindTexture(GL_TEXTURE_2D, shadow_tex_id_list[i]);
 
-          program.GetUniform("lights", i, "shadow_tex").Set(10 + i); 
+          program.GetUniform("lights", i, "shadow_tex").Set(10 + i);
 
-          glm::mat4 light_view_mat = 
-            glm::lookAt(light_ptr->position, 
-                        light_ptr->position + light_ptr->direction, 
+          glm::mat4 light_view_mat =
+            glm::lookAt(light_ptr->position,
+                        light_ptr->position + light_ptr->direction,
                         light_ptr->camera_up);
-          glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle, 
+          glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle,
                                                       1.f, 5.f, 30.f);
 
-          glm::mat4 shadow_mat = light_proj_mat * light_view_mat * 
+          glm::mat4 shadow_mat = light_proj_mat * light_view_mat *
               model_mat;
 
-          program.GetUniform("shadow_mats", i).Set(shadow_mat);      
-        }    
+          program.GetUniform("shadow_mats", i).Set(shadow_mat);
+        }
 
         // Set vertex attributes
 
         glBindVertexArray(vao_id);
 
-        int mesh_idx = mesh_to_idx_map[mesh_ptr];
+        gfx_utils::MeshId mesh_id;
+
+        int mesh_idx = mesh_to_idx_map[mesh_id];
 
         glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list[mesh_idx]);
         glEnableVertexAttribArray(0);
@@ -574,7 +582,7 @@ int main(int argc, char* argv[]) {
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-        if (mesh_ptr->material_list.size() != 0) {
+        if (mesh.material_list.size() != 0) {
           glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list[mesh_idx]);
           glEnableVertexAttribArray(3);
           glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
@@ -584,19 +592,19 @@ int main(int argc, char* argv[]) {
         }
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list[mesh_idx]);
-        glDrawElements(GL_TRIANGLES, mesh_ptr->num_verts, GL_UNSIGNED_INT,
+        glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
             (void*)0);
       }
     }
 
     glBindVertexArray(0);
 
-    glm::mat4 frustum_model_mat = 
-         glm::inverse(glm::lookAt(red_light.position, 
-                                  red_light.position + red_light.direction, 
-                                  red_light.camera_up));
-    wireframe_drawer.Draw(&frustum_mesh, frustum_pos_vbo_id, frustum_ibo_id, 
-                          proj_mat * view_mat * frustum_model_mat);
+    // glm::mat4 frustum_model_mat =
+    //      glm::inverse(glm::lookAt(red_light.position,
+    //                               red_light.position + red_light.direction,
+    //                               red_light.camera_up));
+    // wireframe_drawer.Draw(&frustum_mesh, frustum_pos_vbo_id, frustum_ibo_id,
+    //                       proj_mat * view_mat * frustum_model_mat);
 
     window.SwapBuffers();
     window.TickMainLoop();
@@ -607,9 +615,9 @@ int main(int argc, char* argv[]) {
   }
 
   glDeleteVertexArrays(1, &shadow_vao_id);
-  glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list.size()), 
+  glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list.size()),
                        &shadow_fbo_id_list[0]);
-  glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list.size()), 
+  glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list.size()),
                    &shadow_tex_id_list[0]);
 
   for (auto it = texture_id_map.begin(); it != texture_id_map.end(); ++it) {
@@ -617,22 +625,22 @@ int main(int argc, char* argv[]) {
   }
 
   glDeleteBuffers(static_cast<GLsizei>(ibo_id_list.size()), &ibo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(texcoord_vbo_id_list.size()), 
+  glDeleteBuffers(static_cast<GLsizei>(texcoord_vbo_id_list.size()),
                   &texcoord_vbo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list.size()), 
+  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list.size()),
                   &mtl_vbo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(normal_vbo_id_list.size()), 
+  glDeleteBuffers(static_cast<GLsizei>(normal_vbo_id_list.size()),
       &normal_vbo_id_list[0]);
-  glDeleteBuffers(static_cast<GLsizei>(pos_vbo_id_list.size()), 
+  glDeleteBuffers(static_cast<GLsizei>(pos_vbo_id_list.size()),
       &pos_vbo_id_list[0]);
 
   glDeleteVertexArrays(1, &vao_id);
 
   program.DestroyProgram();
 
-  wireframe_drawer.Destroy();
+  // wireframe_drawer.Destroy();
 
-  glfwTerminate();
+  window.Destroy();
 
   return 0;
 }

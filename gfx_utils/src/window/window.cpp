@@ -78,6 +78,10 @@ bool Window::Inititalize(int window_width, int window_height,
   return true;
 }
 
+void Window::Destroy() {
+  glfwTerminate();
+}
+
 void Window::SwapBuffers() {
   assert(glfw_window_ != nullptr);
 

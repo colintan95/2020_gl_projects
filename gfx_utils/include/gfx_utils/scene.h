@@ -2,9 +2,13 @@
 #define GFX_UTILS_SCENE_H_
 
 #include <vector>
+#include <memory>
 
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
+
+#include "mesh.h"
+#include "model.h"
 
 namespace gfx_utils {
 
@@ -20,19 +24,21 @@ public:
 
   glm::mat4 CalcTransform() const;
 
-  void AddMesh(Mesh* mesh);
+  void AddMeshList(std::shared_ptr<MeshList> mesh_list);
   void SetParent(SceneObject* parent);
 
   void SetScale(glm::vec3 scale) { scale_ = scale; }
 
-  const std::vector<Mesh*>& GetMeshes() const { return meshes_; }
+  const std::vector<Mesh>& GetMeshes() const { 
+    return model_.meshes;
+  }
 
-  bool HasMeshes() const { return meshes_.size() != 0; }
+  bool HasMeshes() const { return meshes_->size() != 0; }
 
 private:
   SceneObject* parent_;
 
-  std::vector<Mesh*> meshes_;
+  std::shared_ptr<Model> model_;
 
   glm::vec3 location_;
   glm::quat rotation_;

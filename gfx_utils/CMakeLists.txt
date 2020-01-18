@@ -1,7 +1,8 @@
-add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/scene.cpp
+add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/entity.cpp
                       src/primitives.cpp src/program.cpp src/texture.cpp 
                       src/window/window.cpp src/window/camera.cpp
-                      src/debug/wireframe_drawer.cpp)
+                      src/debug/wireframe_drawer.cpp
+                      src/resources/resource_manager.cpp)
 
 target_include_directories(gfx_utils PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -14,6 +15,9 @@ target_include_directories(gfx_utils PUBLIC "${GLM_INCLUDE_DIRS}")
 
 # Use stb
 target_include_directories(gfx_utils PUBLIC "${STB_INCLUDE_DIRS}")
+
+# Use nlohmann json
+target_include_directories(gfx_utils PUBLIC "${JSON_INCLUDE_DIRS}")
 
 # Use OpenGL
 target_include_directories(gfx_utils PUBLIC "${OPENGL_INCLUDE_DIRS}")

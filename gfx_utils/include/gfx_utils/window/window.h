@@ -42,6 +42,7 @@ public:
 
   bool Inititalize(int window_width, int window_height,
                    const std::string& window_name);
+  void Destroy();
 
   void SwapBuffers();
 
