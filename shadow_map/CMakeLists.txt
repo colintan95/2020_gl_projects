@@ -1,4 +1,4 @@
-add_executable(shadow_map src/main.cpp)
+add_executable(shadow_map src/main.cpp src/app.cpp)
 
 # Use C++11
 target_compile_features(shadow_map PUBLIC cxx_std_11)
