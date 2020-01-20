@@ -1,4 +1,4 @@
-#include "gfx_utils/resources/resource_manager.h"
+#include "gfx_utils/resource/resource_manager.h"
 
 #include "nlohmann/json.hpp"
 
@@ -9,6 +9,8 @@
 #include <fstream>
 
 #include "gfx_utils/texture.h"
+#include "gfx_utils/resource/data_source.h"
+#include "gfx_utils/resource/light_loader.h"
 
 using json = nlohmann::json;
 
@@ -71,7 +73,7 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
             continue;
           }
 
-          std::shared_ptr<Texture> tex_ptr = std::make_shared<Texture>();
+          auto tex_ptr = std::make_shared<Texture>();
           if (!CreateTextureFromFile(tex_ptr.get(), mtl_dir, texname)) {
             std::cerr << "Failed to load texture: " << texname << std::endl;
             // TODO(colintan): Do better error handling here
@@ -86,14 +88,12 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
   // Load the entities
 
   auto entities_it = json_obj.find("entities");
-
   if (entities_it == json_obj.end()) {
     std::cerr << "Could not find 'entities' json property" << std::endl;
     return false;
   }
 
   auto entities_array = entities_it.value();
-
   for (auto it = entities_array.begin(); it != entities_array.end(); ++it) {
     auto entity_prop = it.value();
     const std::string& model_name = entity_prop["model"];
@@ -111,13 +111,67 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
     entities_list_.push_back(entity);
   }
 
+  // Load the lights
+
+  auto lights_it = json_obj.find("lights");
+  if (lights_it == json_obj.end()) {
+    std::cerr << "Could not find 'lights' json property" << std::endl;
+    return false;
+  }
+
+  auto lights_array = lights_it.value();
+  for (auto it = lights_array.begin(); it != lights_array.end(); ++it) {
+    DataSource data_src;
+    
+    auto light_prop = it.value();
+    for (auto& prop : light_prop.items()) {
+      DataEntry entry;
+
+      auto key = prop.key();
+      auto val = prop.value();
+
+      switch (val.type()) {
+      case json::value_t::array:
+        if (val.size() == 3) {
+          entry.val_vec3 = glm::vec3(val[0].get<float>(),
+                                     val[1].get<float>(),
+                                     val[2].get<float>());
+        }
+        else {
+          std::cerr << "Type not supported" << std::endl;
+        }
+        break;
+      case json::value_t::string:
+        entry.val_str = val.get<std::string>();
+        break;
+      case json::value_t::number_float:
+        entry.val_float = val.get<float>();
+        break;
+      default:
+        std::cerr << "Type not supported" << std::endl;
+      }
+
+      data_src.data_[key] = std::move(entry);
+    }
+
+    const std::string& type = light_prop["type"];
+    LightPtr light_ptr = (*kLightLoadFuncTable.at(type))(data_src);
+
+    lights_[light_prop["name"]] = light_ptr;
+    
+    LightListEntry entry;
+    entry.type = type;
+    entry.ptr = light_ptr;
+    lights_list_.push_back(std::move(entry));
+  }
+
   return true;
 }
 
 bool ResourceManager::LoadModelFromFile(const std::string& name,
                                         const std::string& mtl_directory,
                                         const std::string& path) {
-  std::shared_ptr<Model> model_ptr = std::make_shared<Model>();
+  auto model_ptr = std::make_shared<Model>();
 
   tinyobj::attrib_t attribs;
   std::vector<tinyobj::shape_t> shape_data;

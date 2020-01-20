@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#include <glm/matrix.hpp>
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -30,8 +30,8 @@ void App::Run() {
 }
 
 void App::ShadowPass() {
-  for (int i = 0; i < lights_.size(); ++i) {
-    auto light_ptr = lights_[i];
+  for (int i = 0; i < spotlights_.size(); ++i) {
+    auto light_ptr = spotlights_[i];
 
     glUseProgram(shadow_pass_program_.GetProgramId());
     glViewport(0, 0, kShadowTexWidth, kShadowTexHeight);
@@ -93,8 +93,8 @@ void App::LightPass() {
 
   light_pass_program_.GetUniform("camera_pos").Set(camera_.GetCameraLocation());
 
-  for (int i = 0; i < lights_.size(); ++i) {
-    auto light_ptr = lights_[i];
+  for (int i = 0; i < spotlights_.size(); ++i) {
+    auto light_ptr = spotlights_[i];
 
     // Position of light in modelview space
     glm::vec3 pos_mv =
@@ -203,8 +203,8 @@ void App::LightPass() {
         }
       }
 
-      for (int i = 0; i < lights_.size(); ++i) {
-        auto light_ptr = lights_[i];
+      for (int i = 0; i < spotlights_.size(); ++i) {
+        auto light_ptr = spotlights_[i];
 
         light_pass_program_.GetUniform("lights", i, "is_active").Set(1);
 
@@ -297,25 +297,8 @@ void App::Startup() {
   const auto& models = resource_manager_.GetModels();
   const auto& entities = resource_manager_.GetEntities();
 
-  std::shared_ptr<gfx_utils::SpotLight> white_light = 
-      std::make_shared<gfx_utils::SpotLight>();
-  white_light->position = glm::vec3(0.f, 10.f, 10.f);
-  white_light->diffuse_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
-  white_light->specular_intensity = glm::vec3(0.5f, 0.5f, 0.5f);
-  white_light->direction = glm::vec3(0.f, -1.f, 0.f);
-  white_light->cone_angle = kPi / 2.f;
-  white_light->camera_up = glm::vec3(0.f, 0.f, -1.f);
-  lights_.push_back(white_light);
-
-  std::shared_ptr<gfx_utils::SpotLight> red_light = 
-      std::make_shared<gfx_utils::SpotLight>();
-  red_light->position = glm::vec3(0.f, 10.f, -10.f);
-  red_light->diffuse_intensity = glm::vec3(0.5f, 0.f, 0.f);
-  red_light->specular_intensity = glm::vec3(0.5f, 0.f, 0.f);
-  red_light->direction = glm::vec3(0.f, -1.f, 0.f);
-  red_light->cone_angle = kPi / 2.f;
-  red_light->camera_up = glm::vec3(0.f, 0.f, -1.f);
-  lights_.push_back(red_light);
+  spotlights_ = 
+      resource_manager_.GetLightsByType<gfx_utils::Spotlight>();
 
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
@@ -412,9 +395,7 @@ void App::Startup() {
   }
   glUseProgram(shadow_pass_program_.GetProgramId());
 
-  for (int i = 0; i < lights_.size(); ++i) {
-    auto light_ptr = lights_[i];
-
+  for (auto light_ptr : spotlights_) {
     GLuint shadow_tex_id;
     glGenTextures(1, &shadow_tex_id);
     glBindTexture(GL_TEXTURE_2D, shadow_tex_id);

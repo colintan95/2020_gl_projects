@@ -13,7 +13,7 @@
 #include "gfx_utils/window/window.h"
 #include "gfx_utils/window/camera.h"
 #include "gfx_utils/program.h"
-#include "gfx_utils/resources/resource_manager.h"
+#include "gfx_utils/resource/resource_manager.h"
 #include "gfx_utils/lights.h"
 #include "gfx_utils/mesh.h"
 
@@ -30,14 +30,15 @@ private:
   void Cleanup();
 
 private:
-  gfx_utils::ResourceManager resource_manager_;
-
   gfx_utils::Window window_;
   gfx_utils::Camera camera_;
+
   gfx_utils::Program light_pass_program_;
   gfx_utils::Program shadow_pass_program_;
 
-  std::vector<std::shared_ptr<gfx_utils::SpotLight>> lights_;
+  gfx_utils::ResourceManager resource_manager_;
+
+  std::vector<std::shared_ptr<gfx_utils::Spotlight>> spotlights_;
 
   std::unordered_map<gfx_utils::MeshId, int> mesh_to_idx_map_;
   std::unordered_map<std::string, GLuint> texture_id_map_;

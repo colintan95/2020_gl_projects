@@ -1,4 +1,10 @@
 {
+  "entities": [
+    {
+      "name": "cube",
+      "model": "cube"
+    }
+  ],
   "models": [
     {
       "name": "cube",
@@ -6,10 +12,26 @@
       "mtl_dir": "assets/cube"
     }
   ],
-  "entities": [
+  "lights": [
     {
-      "name": "cube",
-      "model": "cube"
+      "name": "white_light",
+      "type": "spotlight",
+      "position": [0.0, 10.0, 10.0],
+      "diffuse_intensity": [0.5, 0.5, 0.5],
+      "specular_intensity": [0.5, 0.5, 0.5],
+      "direction": [0.0, -1.0, 0.0],
+      "cone_angle": 1.571,
+      "camera_up": [0.0, 0.0, -1.0] 
+    },
+    {
+      "name": "red_light",
+      "type": "spotlight",
+      "position": [0.0, 10.0, -10.0],
+      "diffuse_intensity": [0.5, 0.0, 0.0],
+      "specular_intensity": [0.5, 0.0, 0.0],
+      "direction": [0.0, -1.0, 0.0],
+      "cone_angle": 1.571,
+      "camera_up": [0.0, 0.0, -1.0] 
     }
   ]
 }
