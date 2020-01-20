@@ -92,29 +92,7 @@ void App::LightPass() {
                                         0.1f, 1000.f);
 
   light_pass_program_.GetUniform("camera_pos").Set(camera_.GetCameraLocation());
-
-  for (int i = 0; i < spotlights_.size(); ++i) {
-    auto light_ptr = spotlights_[i];
-
-    // Position of light in modelview space
-    glm::vec3 pos_mv =
-        glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
-    glm::vec3 dir_mv =
-        glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
-                  light_ptr->direction);
-
-    light_pass_program_.GetUniform("lights", i, "position_mv")
-                       .Set(pos_mv);
-    light_pass_program_.GetUniform("lights", i, "diffuse_intensity")
-                       .Set(light_ptr->diffuse_intensity);
-    light_pass_program_.GetUniform("lights", i, "specular_intensity")
-                       .Set(light_ptr->specular_intensity);
-    light_pass_program_.GetUniform("lights", i, "direction_mv")
-                       .Set(dir_mv);
-    light_pass_program_.GetUniform("lights", i, "cone_angle")
-                       .Set(light_ptr->cone_angle);
-  }
-
+  
   light_pass_program_.GetUniform("ambient_intensity")
                      .Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
@@ -127,123 +105,12 @@ void App::LightPass() {
 
     for (auto& mesh : entity_ptr->GetModel()->meshes) {
       glm::mat4 model_mat = entity_ptr->CalcTransform();
-      glm::mat4 mv_mat = view_mat * model_mat;
-      glm::mat4 mvp_mat = proj_mat * mv_mat;
+      
+      LightPass_SetTransformUniforms_Mesh(mesh, model_mat, view_mat, proj_mat);
 
-      light_pass_program_.GetUniform("mv_mat").Set(mv_mat);
-      light_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);
+      LightPass_SetMaterialUniforms_Mesh(mesh);
 
-      // TODO(colintan): Check that this is computing correctly
-      glm::mat3 normal_mat =
-          glm::mat3(glm::transpose(glm::inverse(mv_mat)));
-
-      light_pass_program_.GetUniform("normal_mat").Set(normal_mat);
-
-      // Set the materials data in the fragment shader
-
-      // TODO(colintan): Modify this so that we can render a mesh that has
-      // multiple materials
-      const auto& mtl_list = mesh.material_list;
-      for (int i = 0; i < mtl_list.size(); ++i) {
-        const auto& mtl = mtl_list[i];
-
-        light_pass_program_.GetUniform("materials", i, "ambient_color")
-                           .Set(mtl.ambient_color);
-        light_pass_program_.GetUniform("materials", i, "diffuse_color")
-                           .Set(mtl.diffuse_color);
-        light_pass_program_.GetUniform("materials", i, "specular_color")
-                           .Set(mtl.specular_color);
-        light_pass_program_.GetUniform("materials", i, "emission_color")
-                           .Set(mtl.emission_color);
-        light_pass_program_.GetUniform("materials", i, "shininess")
-                .Set(mtl.shininess);
-
-        if (!mtl.ambient_texname.empty()) {
-          light_pass_program_.GetUniform("materials", i, "has_ambient_tex")
-                             .Set(true);
-
-          // TODO(colintan): This won't work with multiple textures - the
-          // texture unit will only refer to the last texture
-          glActiveTexture(GL_TEXTURE1);
-          glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.ambient_texname]);
-          light_pass_program_.GetUniform("materials", i, "ambient_texture")
-                             .Set(1);
-        }
-        else {
-          light_pass_program_.GetUniform("materials", i, "has_ambient_tex")
-                             .Set(false);
-        }
-
-        if (!mtl.diffuse_texname.empty()) {
-          light_pass_program_.GetUniform("materials", i, "has_diffuse_tex")
-                             .Set(true);
-
-          glActiveTexture(GL_TEXTURE2);
-          glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.diffuse_texname]);
-          light_pass_program_.GetUniform("materials", i, "diffuse_texture")
-                             .Set(2);
-        }
-        else {
-          light_pass_program_.GetUniform("materials", i, "has_diffuse_tex")
-                             .Set(false);
-        }
-
-        if (!mtl.specular_texname.empty()) {
-          light_pass_program_.GetUniform("materials", i, "has_specular_tex")
-                             .Set(true);
-
-          glActiveTexture(GL_TEXTURE3);
-          glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.specular_texname]);
-          light_pass_program_.GetUniform("materials", i, "specular_texture")
-                             .Set(3);
-        }
-        else {
-          light_pass_program_.GetUniform("materials", i, "has_specular_tex")
-                             .Set(false);
-        }
-      }
-
-      for (int i = 0; i < spotlights_.size(); ++i) {
-        auto light_ptr = spotlights_[i];
-
-        light_pass_program_.GetUniform("lights", i, "is_active").Set(1);
-
-        // Position of light in modelview space
-        glm::vec3 pos_mv =
-            glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
-        glm::vec3 dir_mv =
-            glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
-                      light_ptr->direction);
-
-        light_pass_program_.GetUniform("lights", i, "position_mv")
-                           .Set(pos_mv);
-        light_pass_program_.GetUniform("lights", i, "diffuse_intensity")
-                           .Set(light_ptr->diffuse_intensity);
-        light_pass_program_.GetUniform("lights", i, "specular_intensity")
-                           .Set(light_ptr->specular_intensity);
-        light_pass_program_.GetUniform("lights", i, "direction_mv")
-                           .Set(dir_mv);
-        light_pass_program_.GetUniform("lights", i, "cone_angle")
-                           .Set(light_ptr->cone_angle);
-
-        // // TODO(colintan): Don't hardcode this
-        glActiveTexture(GL_TEXTURE10 + i);
-        glBindTexture(GL_TEXTURE_2D, shadow_tex_id_list_[i]);
-
-        light_pass_program_.GetUniform("lights", i, "shadow_tex").Set(10 + i);
-
-        glm::mat4 light_view_mat =
-          glm::lookAt(light_ptr->position,
-                      light_ptr->position + light_ptr->direction,
-                      light_ptr->camera_up);
-        glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle,
-                                                    1.f, 5.f, 30.f);
-
-        glm::mat4 shadow_mat = light_proj_mat * light_view_mat *
-            model_mat;
-
-        light_pass_program_.GetUniform("shadow_mats", i).Set(shadow_mat);
-      }
+      LightPass_SetLightUniforms_Mesh(mesh, model_mat, view_mat);
 
       // Set vertex attributes
 
@@ -279,6 +146,132 @@ void App::LightPass() {
   }
 
   glBindVertexArray(0);
+}
+
+void App::LightPass_SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
+                                              glm::mat4& model_mat,
+                                              glm::mat4& view_mat,
+                                              glm::mat4& proj_mat) {
+  glm::mat4 mv_mat = view_mat * model_mat;
+  glm::mat4 mvp_mat = proj_mat * mv_mat;
+
+  light_pass_program_.GetUniform("mv_mat").Set(mv_mat);
+  light_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);
+
+  // TODO(colintan): Check that this is computing correctly
+  glm::mat3 normal_mat =
+      glm::mat3(glm::transpose(glm::inverse(mv_mat)));
+  light_pass_program_.GetUniform("normal_mat").Set(normal_mat);                                              
+}
+
+void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
+  // TODO(colintan): Modify this so that we can render a mesh that has
+  // multiple materials
+  const auto& mtl_list = mesh.material_list;
+  for (int i = 0; i < mtl_list.size(); ++i) {
+    const auto& mtl = mtl_list[i];
+
+    light_pass_program_.GetUniform("materials", i, "ambient_color")
+                        .Set(mtl.ambient_color);
+    light_pass_program_.GetUniform("materials", i, "diffuse_color")
+                        .Set(mtl.diffuse_color);
+    light_pass_program_.GetUniform("materials", i, "specular_color")
+                        .Set(mtl.specular_color);
+    light_pass_program_.GetUniform("materials", i, "emission_color")
+                        .Set(mtl.emission_color);
+    light_pass_program_.GetUniform("materials", i, "shininess")
+            .Set(mtl.shininess);
+
+    if (!mtl.ambient_texname.empty()) {
+      light_pass_program_.GetUniform("materials", i, "has_ambient_tex")
+                          .Set(true);
+
+      // TODO(colintan): This won't work with multiple textures - the
+      // texture unit will only refer to the last texture
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.ambient_texname]);
+      light_pass_program_.GetUniform("materials", i, "ambient_texture")
+                          .Set(1);
+    }
+    else {
+      light_pass_program_.GetUniform("materials", i, "has_ambient_tex")
+                          .Set(false);
+    }
+
+    if (!mtl.diffuse_texname.empty()) {
+      light_pass_program_.GetUniform("materials", i, "has_diffuse_tex")
+                          .Set(true);
+
+      glActiveTexture(GL_TEXTURE2);
+      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.diffuse_texname]);
+      light_pass_program_.GetUniform("materials", i, "diffuse_texture")
+                          .Set(2);
+    }
+    else {
+      light_pass_program_.GetUniform("materials", i, "has_diffuse_tex")
+                          .Set(false);
+    }
+
+    if (!mtl.specular_texname.empty()) {
+      light_pass_program_.GetUniform("materials", i, "has_specular_tex")
+                          .Set(true);
+
+      glActiveTexture(GL_TEXTURE3);
+      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.specular_texname]);
+      light_pass_program_.GetUniform("materials", i, "specular_texture")
+                          .Set(3);
+    }
+    else {
+      light_pass_program_.GetUniform("materials", i, "has_specular_tex")
+                          .Set(false);
+    }
+  }
+}
+
+void App::LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh,
+                                          glm::mat4& model_mat,
+                                          glm::mat4& view_mat) {
+  for (int i = 0; i < spotlights_.size(); ++i) {  
+    auto light_ptr = spotlights_[i];
+
+    light_pass_program_.GetUniform("lights", i, "is_active").Set(1);
+
+    // Position of light in modelview space
+    glm::vec3 pos_mv =
+        glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
+    glm::vec3 dir_mv =
+        glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
+                  light_ptr->direction);
+
+    light_pass_program_.GetUniform("lights", i, "position_mv")
+                        .Set(pos_mv);
+    light_pass_program_.GetUniform("lights", i, "diffuse_intensity")
+                        .Set(light_ptr->diffuse_intensity);
+    light_pass_program_.GetUniform("lights", i, "specular_intensity")
+                        .Set(light_ptr->specular_intensity);
+    light_pass_program_.GetUniform("lights", i, "direction_mv")
+                        .Set(dir_mv);
+    light_pass_program_.GetUniform("lights", i, "cone_angle")
+                        .Set(light_ptr->cone_angle);
+
+    // // TODO(colintan): Don't hardcode this
+    glActiveTexture(GL_TEXTURE10 + i);
+    glBindTexture(GL_TEXTURE_2D, shadow_tex_id_list_[i]);
+
+    light_pass_program_.GetUniform("lights", i, "shadow_tex").Set(10 + i);
+
+    glm::mat4 light_view_mat =
+      glm::lookAt(light_ptr->position,
+                  light_ptr->position + light_ptr->direction,
+                  light_ptr->camera_up);
+    glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle,
+                                                1.f, 5.f, 30.f);
+
+    glm::mat4 shadow_mat = light_proj_mat * light_view_mat *
+        model_mat;
+
+    light_pass_program_.GetUniform("shadow_mats", i).Set(shadow_mat);
+  }
 }
 
 void App::Startup() {

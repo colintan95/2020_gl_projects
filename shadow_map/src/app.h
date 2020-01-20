@@ -25,6 +25,15 @@ private:
   void ShadowPass();
   void LightPass();
 
+  void LightPass_SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
+                                           glm::mat4& model_mat,
+                                           glm::mat4& view_mat,
+                                           glm::mat4& proj_mat);
+  void LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh);
+  void LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh,
+                                       glm::mat4& model_mat,
+                                       glm::mat4& view_mat);
+
   void Startup();
   void MainLoop();
   void Cleanup();
