@@ -8,6 +8,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include "gfx_utils/primitives.h"
+
 static const float kPi = 3.14159265358979323846f;
 
 static const int kWindowWidth = 1920;
@@ -29,6 +31,24 @@ void App::Run() {
   Cleanup();
 }
 
+void App::MainLoop() {
+  bool should_quit = false;
+
+  while (!should_quit) {
+    ShadowPass();
+
+    LightPass();
+
+    window_.SwapBuffers();
+    window_.TickMainLoop();
+
+    if (window_.ShouldQuit()) {
+      should_quit = true;
+    }
+  }
+}
+
+
 void App::ShadowPass() {
   for (int i = 0; i < spotlights_.size(); ++i) {
     auto light_ptr = spotlights_[i];
@@ -48,7 +68,7 @@ void App::ShadowPass() {
         continue;
       }
 
-      for (auto mesh: entity_ptr->GetModel()->meshes) {
+      for (auto mesh: entity_ptr->GetModel()->GetMeshes()) {
         glm::mat4 model_mat = entity_ptr->CalcTransform();
         glm::mat4 view_mat = 
             glm::lookAt(light_ptr->position,
@@ -92,7 +112,7 @@ void App::LightPass() {
                                         0.1f, 1000.f);
 
   light_pass_program_.GetUniform("camera_pos").Set(camera_.GetCameraLocation());
-  
+
   light_pass_program_.GetUniform("ambient_intensity")
                      .Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
@@ -103,7 +123,7 @@ void App::LightPass() {
       continue;
     }
 
-    for (auto& mesh : entity_ptr->GetModel()->meshes) {
+    for (auto& mesh : entity_ptr->GetModel()->GetMeshes()) {
       glm::mat4 model_mat = entity_ptr->CalcTransform();
       
       LightPass_SetTransformUniforms_Mesh(mesh, model_mat, view_mat, proj_mat);
@@ -287,11 +307,18 @@ void App::Startup() {
 
   resource_manager_.LoadResourcesFromJson("assets/resources.json");
 
+  // Add custom room entity
+  auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
+  room_model_ptr->GetMeshes() = 
+      std::move(gfx_utils::CreateRoom(30.f, 20.f, 80.f));
+  auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
+  room_entity_ptr->SetModel(room_model_ptr);
+  resource_manager_.AddEntity(room_entity_ptr);
+
   const auto& models = resource_manager_.GetModels();
   const auto& entities = resource_manager_.GetEntities();
 
-  spotlights_ = 
-      resource_manager_.GetLightsByType<gfx_utils::Spotlight>();
+  spotlights_ = resource_manager_.GetLightsByType<gfx_utils::Spotlight>();
 
   // Enable all necessary GL settings
   glEnable(GL_TEXTURE_2D);
@@ -308,7 +335,7 @@ void App::Startup() {
   glGenVertexArrays(1, &light_pass_vao_id_);
 
   for (auto model_ptr : models) {
-    for (gfx_utils::Mesh& mesh : model_ptr->meshes) {
+    for (gfx_utils::Mesh& mesh : model_ptr->GetMeshes()) {
       gfx_utils::MeshId id = mesh.id;
 
       mesh_to_idx_map_[id] = static_cast<int>(ibo_id_list_.size());
@@ -413,23 +440,6 @@ void App::Startup() {
   }
 
   glGenVertexArrays(1, &shadow_pass_vao_id_);
-}
-
-void App::MainLoop() {
-  bool should_quit = false;
-
-  while (!should_quit) {
-    ShadowPass();
-
-    LightPass();
-
-    window_.SwapBuffers();
-    window_.TickMainLoop();
-
-    if (window_.ShouldQuit()) {
-      should_quit = true;
-    }
-  }
 }
 
 void App::Cleanup() {

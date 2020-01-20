@@ -1,14 +1,31 @@
 #ifndef GFX_UTILS_MODEL_
 #define GFX_UTILS_MODEL_
 
+#include <string>
 #include <vector>
 
 #include "mesh.h"
 
 namespace gfx_utils {
 
-struct Model {
-  std::vector<Mesh> meshes;
+class Model {
+public:
+  Model(const std::string& name) {
+    name_ = name;
+  }
+
+  std::vector<Mesh>& GetMeshes() {
+    return meshes_;
+  }
+
+  const std::string& GetName() const {
+    return name_;
+  }
+
+private:
+  std::string name_;
+
+  std::vector<Mesh> meshes_;
 };
 
 } // namespace gfx_utils

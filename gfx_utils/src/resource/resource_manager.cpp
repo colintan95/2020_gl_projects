@@ -50,7 +50,7 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
 
     // Load the textures for the meshes in the model
 
-    for (gfx_utils::Mesh mesh : model_ptr->meshes) {
+    for (gfx_utils::Mesh mesh : model_ptr->GetMeshes()) {
       for (gfx_utils::Material mtl : mesh.material_list) {
         // TODO(colintan): Store the texture strings as a collection in the
         // material so that this code works even when we add or remove textures
@@ -104,10 +104,12 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
       continue;
     }
 
-    auto entity = std::make_shared<Entity>();
+    const std::string& entity_name = entity_prop["name"];
+
+    auto entity = std::make_shared<Entity>(entity_name);
     entity->SetModel(model_it->second);
     
-    entities_[entity_prop["name"]] = entity;
+    entities_[entity_name] = entity;
     entities_list_.push_back(entity);
   }
 
@@ -171,7 +173,7 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
 bool ResourceManager::LoadModelFromFile(const std::string& name,
                                         const std::string& mtl_directory,
                                         const std::string& path) {
-  auto model_ptr = std::make_shared<Model>();
+  auto model_ptr = std::make_shared<Model>(name);
 
   tinyobj::attrib_t attribs;
   std::vector<tinyobj::shape_t> shape_data;
@@ -316,12 +318,38 @@ bool ResourceManager::LoadModelFromFile(const std::string& name,
 
     out_mesh.num_verts = out_mesh.index_data.size();
 
-    model_ptr->meshes.push_back(std::move(out_mesh));
+    model_ptr->GetMeshes().push_back(std::move(out_mesh));
     models_[name] = model_ptr;
     models_list_.push_back(model_ptr);
   }
 
   return true;
+}
+
+void ResourceManager::AddEntity(EntityPtr entity) {
+  if (!entity->HasModel()) {
+    std::cerr << "Entity does not have a model." << std::endl;
+    return;
+  }
+
+  auto entity_name = entity->GetName();
+  auto model_name = entity->GetModel()->GetName();
+
+  if (entities_.find(entity_name) != entities_.end()) {
+    std::cerr << "Entity name already used." << std::endl;
+    return;
+  }
+
+  if (models_.find(model_name) != models_.end()) {
+    std::cerr << "Model name already used." << std::endl;
+    return;
+  }
+
+  entities_[entity_name] = entity;
+  entities_list_.push_back(entity);
+
+  models_[model_name] = entity->GetModel();
+  models_list_.push_back(entity->GetModel());
 }
 
 const ModelList& ResourceManager::GetModels() {

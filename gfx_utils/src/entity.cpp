@@ -8,7 +8,9 @@
 
 namespace gfx_utils {
 
-Entity::Entity() {
+Entity::Entity(const std::string& name) {
+  name_ = name;
+
   parent_ = nullptr;
   
   location_ = glm::vec3(0.f, 0.f, 0.f);

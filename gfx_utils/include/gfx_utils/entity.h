@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <string>
 
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -15,7 +16,7 @@ namespace gfx_utils {
 class Entity {
 
 public:
-  Entity();
+  Entity(const std::string& name);
 
   glm::mat4 CalcTransform() const;
 
@@ -30,7 +31,13 @@ public:
 
   bool HasModel() const;
 
+  const std::string& GetName() const {
+    return name_;
+  }
+
 private:
+  std::string name_;
+
   std::shared_ptr<Entity> parent_;
 
   std::shared_ptr<Model> model_;

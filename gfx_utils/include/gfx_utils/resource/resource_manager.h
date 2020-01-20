@@ -37,6 +37,8 @@ public:
                           const std::string& mtl_directory,
                           const std::string& path);
 
+  void AddEntity(EntityPtr entity);
+
   const ModelList& GetModels();
   const EntityList& GetEntities();
 

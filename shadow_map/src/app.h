@@ -22,7 +22,10 @@ public:
   void Run();
 
 private:
+  void MainLoop();
+
   void ShadowPass();
+  
   void LightPass();
 
   void LightPass_SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
@@ -35,7 +38,7 @@ private:
                                        glm::mat4& view_mat);
 
   void Startup();
-  void MainLoop();
+
   void Cleanup();
 
 private:
