@@ -41,12 +41,16 @@ set(STB_INCLUDE_DIRS
 set(JSON_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/json/include")
 
+# Set the asset folder location
+set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+
 # Library that contains utils commonly used in the projects
 # NOTE: Must be added before any of the graphics projects so that the projects
 # can link to the utils lib
-add_subdirectory(gfx_utils)
+add_subdirectory(libs/gfx_utils)
+add_subdirectory(libs/gl_utils)
 
 # Place targets for the graphics projects here
 #add_subdirectory(hello_sponza)
-#add_subdirectory(hello_window)
-add_subdirectory(shadow_map)
+add_subdirectory(projs/shadow_map)
+add_subdirectory(projs/hello_renderer)
