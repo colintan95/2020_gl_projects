@@ -80,13 +80,15 @@ void App::ShadowPass() {
 
         shadow_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);
 
-        int mesh_idx = mesh_to_idx_map_[mesh.id];
-
-        glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list_[mesh_idx]);
+        GLuint pos_vbo_id = 
+            gl_resource_manager_.GetMeshVboId(mesh.id, 
+                                              gfx_utils::kVertTypePosition);
+        glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list_[mesh_idx]);
+        GLuint ibo_id = gl_resource_manager_.GetMeshIboId(mesh.id);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
         glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
                         (void*)0);
       }
@@ -137,26 +139,37 @@ void App::LightPass() {
 
       glBindVertexArray(light_pass_vao_id_);
 
-      int mesh_idx = mesh_to_idx_map_[mesh.id];
-
-      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id_list_[mesh_idx]);
+      GLuint pos_vbo_id = 
+          gl_resource_manager_.GetMeshVboId(mesh.id, 
+                                            gfx_utils::kVertTypePosition);
+      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
       glEnableVertexAttribArray(0);
       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id_list_[mesh_idx]);
+      GLuint normal_vbo_id = 
+          gl_resource_manager_.GetMeshVboId(mesh.id, 
+                                            gfx_utils::kVertTypeNormal);
+      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id);
       glEnableVertexAttribArray(1);
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id_list_[mesh_idx]);
+      GLuint texcoord_vbo_id =
+          gl_resource_manager_.GetMeshVboId(mesh.id, 
+                                            gfx_utils::kVertTypeTexcoord);
+      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
       glEnableVertexAttribArray(2);
       glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
       // Each mesh should have a material 
-      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list_[mesh_idx]);
+      GLuint mtl_vbo_id =
+          gl_resource_manager_.GetMeshVboId(mesh.id, 
+                                            gfx_utils::kVertTypeMtlId);
+      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
       glEnableVertexAttribArray(3);
       glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
 
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id_list_[mesh_idx]);
+      GLuint ibo_id = gl_resource_manager_.GetMeshIboId(mesh.id);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
 
       glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT, (void*)0);
     }
@@ -202,7 +215,10 @@ void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
                          .Set(true);
 
       glActiveTexture(GL_TEXTURE1);
-      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.ambient_texname]);
+      GLuint tex_gl_id = 
+          gl_resource_manager_
+              .GetTextureId(texture_id_map_[mtl.ambient_texname]);
+      glBindTexture(GL_TEXTURE_2D, tex_gl_id);
       light_pass_program_.GetUniform("materials", i, "ambient_texture")
                          .Set(1);
     }
@@ -216,7 +232,10 @@ void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
                          .Set(true);
 
       glActiveTexture(GL_TEXTURE2);
-      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.diffuse_texname]);
+      GLuint tex_gl_id = 
+          gl_resource_manager_
+              .GetTextureId(texture_id_map_[mtl.diffuse_texname]);
+      glBindTexture(GL_TEXTURE_2D, tex_gl_id);
       light_pass_program_.GetUniform("materials", i, "diffuse_texture")
                          .Set(2);
     }
@@ -230,7 +249,10 @@ void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
                          .Set(true);
 
       glActiveTexture(GL_TEXTURE3);
-      glBindTexture(GL_TEXTURE_2D, texture_id_map_[mtl.specular_texname]);
+      GLuint tex_gl_id = 
+          gl_resource_manager_
+              .GetTextureId(texture_id_map_[mtl.specular_texname]);
+      glBindTexture(GL_TEXTURE_2D, tex_gl_id);
       light_pass_program_.GetUniform("materials", i, "specular_texture")
                          .Set(3);
     }
@@ -327,80 +349,25 @@ void App::Startup() {
 
   glGenVertexArrays(1, &light_pass_vao_id_);
 
+  // Allocate VBOs for meshes
   for (auto model_ptr : models) {
     for (gfx_utils::Mesh& mesh : model_ptr->GetMeshes()) {
-      gfx_utils::MeshId id = mesh.id;
-
-      mesh_to_idx_map_[id] = static_cast<int>(ibo_id_list_.size());
-
-      GLuint pos_vbo_id;
-      glGenBuffers(1, &pos_vbo_id);
-      glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
-      glBufferData(GL_ARRAY_BUFFER, mesh.pos_data.size() * 3 * sizeof(float),
-                   &mesh.pos_data[0], GL_STATIC_DRAW);
-      pos_vbo_id_list_.push_back(pos_vbo_id);
-
-      GLuint normal_vbo_id;
-      glGenBuffers(1, &normal_vbo_id);
-      glBindBuffer(GL_ARRAY_BUFFER, normal_vbo_id);
-      glBufferData(GL_ARRAY_BUFFER, mesh.normal_data.size() * 3 * sizeof(float),
-                   &mesh.normal_data[0], GL_STATIC_DRAW);
-      normal_vbo_id_list_.push_back(normal_vbo_id);
-
-      GLuint texcoord_vbo_id;
-      glGenBuffers(1, &texcoord_vbo_id);
-      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
-      glBufferData(GL_ARRAY_BUFFER, mesh.texcoord_data.size() * 2 * sizeof(float),
-                   &mesh.texcoord_data[0], GL_STATIC_DRAW);
-      texcoord_vbo_id_list_.push_back(texcoord_vbo_id);
-
-      if (mesh.material_list.size() != 0) {
-        GLuint mtl_vbo_id;
-        glGenBuffers(1, &mtl_vbo_id);
-        glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
-        glBufferData(GL_ARRAY_BUFFER,
-                     mesh.mtl_id_data.size() * sizeof(unsigned int),
-                     &mesh.mtl_id_data[0], GL_STATIC_DRAW);
-        mtl_vbo_id_list_.push_back(mtl_vbo_id);
-      }
-      else {
-        mtl_vbo_id_list_.push_back(0);
-      }
-
-      GLuint ibo_id;
-      glGenBuffers(1, &ibo_id);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
-      glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                   mesh.index_data.size() * sizeof(uint32_t),
-                   &mesh.index_data[0], GL_STATIC_DRAW);
-      ibo_id_list_.push_back(ibo_id);
+      gl_resource_manager_.CreateMeshResources(mesh);
     }
   }
 
   // Maps the texture name to the corresponding Texture pointer
   auto& texture_name_map = resource_manager_.GetTextureNameMap();
 
+  // Allocate textures 
   for (auto it = texture_name_map.begin(); it != texture_name_map.end(); ++it) {
     const std::string& texname = it->first;
     auto texture_ptr = it->second;
 
-    GLuint texture_id;
-    glGenTextures(1, &texture_id);
-    glBindTexture(GL_TEXTURE_2D, texture_id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    gl_resource_manager_.CreateTextureResources(*texture_ptr);
 
-    GLenum format = texture_ptr->has_alpha ? GL_RGBA : GL_RGB;
-    glTexImage2D(GL_TEXTURE_2D, 0, format, texture_ptr->tex_width,
-                 texture_ptr->tex_height, 0, format, GL_UNSIGNED_BYTE,
-                 &texture_ptr->tex_data[0]);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Maps the texture name to the corresponding GLuint texture id
-    texture_id_map_[texname] = texture_id;
+    texture_id_map_[texname] = 
+        gl_resource_manager_.GetTextureId(texture_ptr->id);
   }
 
   if (!shadow_pass_program_.CreateProgram(kShadowPassVertShaderPath,
@@ -445,21 +412,9 @@ void App::Cleanup() {
 
   shadow_pass_program_.DestroyProgram();
 
-  for (auto it = texture_id_map_.begin(); it != texture_id_map_.end(); ++it) {
-    glDeleteTextures(1, &it->second);
-  }
-
-  glDeleteBuffers(static_cast<GLsizei>(ibo_id_list_.size()), &ibo_id_list_[0]);
-  glDeleteBuffers(static_cast<GLsizei>(mtl_vbo_id_list_.size()),
-                  &mtl_vbo_id_list_[0]);
-  glDeleteBuffers(static_cast<GLsizei>(texcoord_vbo_id_list_.size()),
-                  &texcoord_vbo_id_list_[0]);
-  glDeleteBuffers(static_cast<GLsizei>(normal_vbo_id_list_.size()),
-                  &normal_vbo_id_list_[0]);
-  glDeleteBuffers(static_cast<GLsizei>(pos_vbo_id_list_.size()),
-                  &pos_vbo_id_list_[0]);
-
   glDeleteVertexArrays(1, &light_pass_vao_id_);
+
+  gl_resource_manager_.Cleanup();
   
   light_pass_program_.DestroyProgram();
 

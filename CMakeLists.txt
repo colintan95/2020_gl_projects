@@ -48,7 +48,6 @@ set(ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
 # NOTE: Must be added before any of the graphics projects so that the projects
 # can link to the utils lib
 add_subdirectory(libs/gfx_utils)
-add_subdirectory(libs/gl_utils)
 
 # Place targets for the graphics projects here
 #add_subdirectory(hello_sponza)

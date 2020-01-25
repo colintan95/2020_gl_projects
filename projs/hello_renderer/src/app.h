@@ -16,6 +16,7 @@
 #include "gfx_utils/resource/resource_manager.h"
 #include "gfx_utils/lights.h"
 #include "gfx_utils/mesh.h"
+#include "gfx_utils/gl/gl_resource_manager.h"
 
 class App {
 public:
@@ -48,19 +49,16 @@ private:
   gfx_utils::Program light_pass_program_;
   gfx_utils::Program shadow_pass_program_;
 
+  gfx_utils::GLResourceManager gl_resource_manager_;
+
   gfx_utils::ResourceManager resource_manager_;
 
   std::vector<std::shared_ptr<gfx_utils::Spotlight>> spotlights_;
 
-  std::unordered_map<gfx_utils::MeshId, int> mesh_to_idx_map_;
-  std::unordered_map<std::string, GLuint> texture_id_map_;
+  // std::unordered_map<gfx_utils::MeshId, int> mesh_to_idx_map_;
+  std::unordered_map<std::string, gfx_utils::TextureId> texture_id_map_;
 
   GLuint light_pass_vao_id_;
-  std::vector<GLuint> pos_vbo_id_list_;
-  std::vector<GLuint> normal_vbo_id_list_;
-  std::vector<GLuint> texcoord_vbo_id_list_;
-  std::vector<GLuint> mtl_vbo_id_list_;
-  std::vector<GLuint> ibo_id_list_;
 
   GLuint shadow_pass_vao_id_;
   std::vector<GLuint> shadow_tex_id_list_;

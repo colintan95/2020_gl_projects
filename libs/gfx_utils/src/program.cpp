@@ -46,9 +46,21 @@ bool Program::CreateProgram(const std::string& vert_shader_path,
     return false;
   }            
 
-  GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
+  std::string frag_shader_src;
+  if (!LoadShaderSource(&frag_shader_src, frag_shader_path)) {
+    std::cerr << "Failed to find fragment shader source at: "
+      << frag_shader_path << std::endl;
+    return false;
+  }
 
-  char const *vert_shader_src_ptr = vert_shader_src.c_str();
+  return CreateProgram(vert_shader_src.c_str(), frag_shader_src.c_str());
+}
+
+bool Program::CreateProgram(const char* vert_shader_src, 
+                            const char* frag_shader_src) {
+GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
+
+  char const *vert_shader_src_ptr = vert_shader_src;
   glShaderSource(vert_shader_id, 1, &vert_shader_src_ptr, nullptr);
   glCompileShader(vert_shader_id);
 
@@ -70,16 +82,9 @@ bool Program::CreateProgram(const std::string& vert_shader_path,
     return false;
   }
   
-  std::string frag_shader_src;
-  if (!LoadShaderSource(&frag_shader_src, frag_shader_path)) {
-    std::cerr << "Failed to find fragment shader source at: "
-      << frag_shader_path << std::endl;
-    return false;
-  }
-
   GLuint frag_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
 
-  char const* frag_shader_src_ptr = frag_shader_src.c_str();
+  char const* frag_shader_src_ptr = frag_shader_src;
   glShaderSource(frag_shader_id, 1, &frag_shader_src_ptr, nullptr);
   glCompileShader(frag_shader_id);
 

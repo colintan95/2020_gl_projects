@@ -37,6 +37,7 @@ class Program {
 public:
   bool CreateProgram(const std::string& vert_shader_path, 
                      const std::string& frag_shader_path);
+  bool CreateProgram(const char* vert_shader_src, const char* frag_shader_src);
   void DestroyProgram();
 
   // e.g. program.GetUniform("mvp_mat").Set(...)

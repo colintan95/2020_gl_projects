@@ -10,10 +10,10 @@
 
 namespace gfx_utils {
 
-static uint64_t mesh_id_counter = 0;
+static MeshId mesh_id_counter = 0;
 
 Mesh::Mesh() {
-  mesh_id_counter++;
+  ++mesh_id_counter;
 
   id = mesh_id_counter;
 }

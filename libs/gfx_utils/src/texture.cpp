@@ -7,6 +7,14 @@
 
 namespace gfx_utils {
 
+static TextureId texture_id_counter = 0;
+
+Texture::Texture() {
+  ++texture_id_counter;
+
+  id = texture_id_counter;
+}
+
 bool CreateTextureFromFile(Texture* out_tex, const std::string& tex_directory,
                            const std::string& texname) {
   out_tex->tex_width = 0;
