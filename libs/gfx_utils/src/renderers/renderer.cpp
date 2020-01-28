@@ -2,8 +2,24 @@
 
 namespace gfx_utils {
 
-void Renderer::AttachCamera(Camera* camera) {
+void Renderer::SetResourceManager(GLResourceManager* manager) {
+  resource_manager_ = manager;
+}
+
+void Renderer::SetWindow(Window* window) {
+  window_ = window;
+}
+
+void Renderer::SetCamera(Camera* camera) {
   camera_ = camera;
+}
+
+GLResourceManager* Renderer::GetResourceManager() {
+  return resource_manager_;
+}
+
+Window* Renderer::GetWindow() {
+  return window_;
 }
 
 Camera* Renderer::GetCamera() {

@@ -3,6 +3,8 @@
 
 #include "gfx_utils/resource/resource_manager.h"
 #include "gfx_utils/window/camera.h"
+#include "gfx_utils/window/window.h"
+#include "gfx_utils/gl/gl_resource_manager.h"
 
 namespace gfx_utils {
 
@@ -13,11 +15,17 @@ public:
 
   virtual void Render(const EntityList& entities) = 0;
 
-  void AttachCamera(Camera* camera);
+  void SetResourceManager(GLResourceManager* manager);
+  void SetWindow(Window* window);
+  void SetCamera(Camera* camera);
 
+  GLResourceManager* GetResourceManager();
+  Window* GetWindow();
   Camera* GetCamera();
 
 private:
+  GLResourceManager* resource_manager_;
+  Window* window_;
   Camera* camera_;
 };
 

@@ -2,6 +2,26 @@
 
 namespace gfx_utils {
 
+void GLResourceManager::CreateGLResources() {
+  const auto& models = resource_manager_->GetModels();
+
+  for (auto model_ptr : models) {
+    for (gfx_utils::Mesh& mesh : model_ptr->GetMeshes()) {
+      CreateMeshResources(mesh);
+    }
+  }
+
+  // Maps the texture name to the corresponding Texture pointer
+  auto& texture_name_map = resource_manager_->GetTextureNameMap();
+
+  // Allocate textures 
+  for (auto it = texture_name_map.begin(); it != texture_name_map.end(); ++it) {
+    auto texture_ptr = it->second;
+
+    CreateTextureResources(*texture_ptr);
+  }
+}
+
 void GLResourceManager::Cleanup() {
   for (auto it : texture_gl_id_map_) {
     glDeleteTextures(1, &it.second);
@@ -118,6 +138,12 @@ GLuint GLResourceManager::GetMeshIboId(MeshId id) {
 
 GLuint GLResourceManager::GetTextureId(TextureId id) {
   return texture_gl_id_map_[id];
+}
+
+GLuint GLResourceManager::GetTextureId(const std::string& texname) {
+  auto texture_ptr = resource_manager_->GetTexture(texname);
+
+  return texture_gl_id_map_[texture_ptr->id];
 }
 
 } // namespace gfx_utils

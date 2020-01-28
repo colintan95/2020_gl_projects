@@ -59,6 +59,14 @@ public:
   void RegisterMouseMoveBinding(void *receiver, MouseMoveFunc func);
   void RemoveMouseMoveBinding(void *receiver);
 
+  int GetWindowWidth() const {
+    return window_width_;
+  }
+
+  int GetWindowHeight() const {
+    return window_height_;
+  }
+
 private:
   struct KeyActionInfo {
     bool status = false;

@@ -19,6 +19,13 @@ public:
   void Render(const EntityList& entities) override;
 
 private:
+  void SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
+                                 glm::mat4& model_mat,
+                                 glm::mat4& view_mat,
+                                 glm::mat4& proj_mat);
+  void SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh);
+
+private:
   Program program_;
 
   GLuint vao_id_;
