@@ -10,7 +10,7 @@
 
 #include "gfx_utils/mesh.h"
 #include "gfx_utils/texture.h"
-#include "gfx_utils/resource/resource_manager.h"
+#include "gfx_utils/scene/scene.h"
 
 namespace gfx_utils {
 
@@ -32,8 +32,8 @@ public:
   GLuint GetTextureId(TextureId id);
   GLuint GetTextureId(const std::string& texname);
 
-  void SetResourceManager(ResourceManager* resource_manager) {
-    resource_manager_ = resource_manager;
+  void SetScene(Scene* scene) {
+    scene_ = scene;
   }
 
 private:
@@ -41,7 +41,7 @@ private:
   void CreateTextureResources(const Texture& texture);
 
 private:
-  ResourceManager* resource_manager_;
+  Scene* scene_;
 
   std::unordered_map<TextureId, GLuint> texture_gl_id_map_;
 

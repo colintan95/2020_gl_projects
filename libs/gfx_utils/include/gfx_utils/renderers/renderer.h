@@ -1,7 +1,6 @@
 #ifndef GFX_UTILS_RENDERERS_RENDERER_H_
 #define GFX_UTILS_RENDERERS_RENDERER_H_
 
-#include "gfx_utils/resource/resource_manager.h"
 #include "gfx_utils/window/camera.h"
 #include "gfx_utils/window/window.h"
 #include "gfx_utils/gl/gl_resource_manager.h"

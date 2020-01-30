@@ -61,7 +61,7 @@ void App::ShadowPass() {
 
     glBindVertexArray(shadow_pass_vao_id_);
 
-    const auto& entities = resource_manager_.GetEntities();
+    const auto& entities = scene_.GetEntities();
 
     for (auto entity_ptr : entities) {
       if (!entity_ptr->HasModel()) {
@@ -117,7 +117,7 @@ void App::LightPass() {
   light_pass_program_.GetUniform("ambient_intensity")
                      .Set(glm::vec3(0.5f, 0.5f, 0.5f));
 
-  const auto& entities = resource_manager_.GetEntities();
+  const auto& entities = scene_.GetEntities();
 
   for (auto entity_ptr : entities) {
     if (!entity_ptr->HasModel()) {
@@ -298,7 +298,7 @@ void App::Startup() {
     exit(1);
   }
 
-  resource_manager_.LoadResourcesFromJson("assets/resources.json");
+  scene_.LoadSceneFromJson("assets/scene.json");
 
   // Add custom room entity
   auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
@@ -306,12 +306,12 @@ void App::Startup() {
       std::move(gfx_utils::CreateRoom(30.f, 20.f, 80.f));
   auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
   room_entity_ptr->SetModel(room_model_ptr);
-  resource_manager_.AddEntity(room_entity_ptr);
+  scene_.AddEntity(room_entity_ptr);
 
-  const auto& models = resource_manager_.GetModels();
-  const auto& entities = resource_manager_.GetEntities();
+  const auto& models = scene_.GetModels();
+  const auto& entities = scene_.GetEntities();
 
-  spotlights_ = resource_manager_.GetLightsByType<gfx_utils::Spotlight>();
+  spotlights_ = scene_.GetLightsByType<gfx_utils::Spotlight>();
 
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
@@ -378,7 +378,7 @@ void App::Startup() {
   }
 
   // Maps the texture name to the corresponding Texture pointer
-  auto& texture_name_map = resource_manager_.GetTextureNameMap();
+  auto& texture_name_map = scene_.GetTextureNameMap();
 
   for (auto it = texture_name_map.begin(); it != texture_name_map.end(); ++it) {
     const std::string& texname = it->first;

@@ -1,5 +1,5 @@
-#ifndef GFX_UTILS_RESOURCE_DATA_SOURCE_H_
-#define GFX_UTILS_RESOURCE_DATA_SOURCE_H_
+#ifndef GFX_UTILS_SCENE_DATA_SOURCE_H_
+#define GFX_UTILS_SCENE_DATA_SOURCE_H_
 
 #include <string>
 #include <unordered_map>
@@ -25,9 +25,9 @@ private:
   std::unordered_map<std::string, DataEntry> data_;
 
 private:
-  friend class ResourceManager;
+  friend class Scene;
 };
 
 } // namespace gfx_utils
 
-#endif // GFX_UTILS_RESOURCE_DATA_SOURCE_H_
+#endif // GFX_UTILS_SCENE_DATA_SOURCE_H_

@@ -1,4 +1,4 @@
-#include "gfx_utils/resource/resource_manager.h"
+#include "gfx_utils/scene/scene.h"
 
 #include "nlohmann/json.hpp"
 
@@ -9,14 +9,14 @@
 #include <fstream>
 
 #include "gfx_utils/texture.h"
-#include "gfx_utils/resource/data_source.h"
-#include "gfx_utils/resource/light_loader.h"
+#include "gfx_utils/scene/data_source.h"
+#include "gfx_utils/scene/light_loader.h"
 
 using json = nlohmann::json;
 
 namespace gfx_utils {
 
-bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
+bool Scene::LoadSceneFromJson(const std::string& path) {
   std::ifstream json_fs(path);
   if (!json_fs.is_open()) {
     std::cerr << "Could not open file: " << path << std::endl;
@@ -110,6 +110,14 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
     
     entity->SetModel(model_it->second);
 
+    // Set location if present
+    if (entity_prop.find("position") != entity_prop.end()) {
+      auto pos_prop = entity_prop["position"];
+      entity->SetLocation(glm::vec3(pos_prop[0].get<float>(),
+                                    pos_prop[1].get<float>(),
+                                    pos_prop[2].get<float>()));
+    }
+
     // Set scale if present
     if (entity_prop.find("scale") != entity_prop.end()) {
       auto scale_prop = entity_prop["scale"];
@@ -179,7 +187,7 @@ bool ResourceManager::LoadResourcesFromJson(const std::string& path) {
   return true;
 }
 
-bool ResourceManager::LoadModelFromFile(const std::string& name,
+bool Scene::LoadModelFromFile(const std::string& name,
                                         const std::string& mtl_directory,
                                         const std::string& path) {
   auto model_ptr = std::make_shared<Model>(name);
@@ -336,7 +344,7 @@ bool ResourceManager::LoadModelFromFile(const std::string& name,
   return true;
 }
 
-void ResourceManager::AddEntity(EntityPtr entity) {
+void Scene::AddEntity(EntityPtr entity) {
   if (!entity->HasModel()) {
     std::cerr << "Entity does not have a model." << std::endl;
     return;
@@ -362,19 +370,19 @@ void ResourceManager::AddEntity(EntityPtr entity) {
   models_list_.push_back(entity->GetModel());
 }
 
-const ModelList& ResourceManager::GetModels() {
+const ModelList& Scene::GetModels() {
   return models_list_;
 }
   
-const EntityList& ResourceManager::GetEntities() {
+const EntityList& Scene::GetEntities() {
   return entities_list_;
 }
 
-const TextureNameMap& ResourceManager::GetTextureNameMap() {
+const TextureNameMap& Scene::GetTextureNameMap() {
   return textures_;
 }
 
-ModelPtr ResourceManager::GetModel(const std::string& name) {
+ModelPtr Scene::GetModel(const std::string& name) {
   auto it = models_.find(name);
   if (it == models_.end()) {
     return nullptr;
@@ -382,7 +390,7 @@ ModelPtr ResourceManager::GetModel(const std::string& name) {
   return it->second;
 }
 
-EntityPtr ResourceManager::GetEntity(const std::string& name) {
+EntityPtr Scene::GetEntity(const std::string& name) {
   auto it = entities_.find(name);
   if (it == entities_.end()) {
     return nullptr;
@@ -390,7 +398,7 @@ EntityPtr ResourceManager::GetEntity(const std::string& name) {
   return it->second;
 }
 
-TexturePtr ResourceManager::GetTexture(const std::string& name) {
+TexturePtr Scene::GetTexture(const std::string& name) {
   auto it = textures_.find(name);
   if (it == textures_.end()) {
     return nullptr;

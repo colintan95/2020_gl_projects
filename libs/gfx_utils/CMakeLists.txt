@@ -2,9 +2,9 @@ add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/entity.cpp
                       src/primitives.cpp src/program.cpp src/texture.cpp 
                       src/window/window.cpp src/window/camera.cpp
                       src/debug/wireframe_drawer.cpp
-                      src/resource/resource_manager.cpp
-                      src/resource/data_source.cpp
-                      src/resource/light_loader.cpp
+                      src/scene/scene.cpp
+                      src/scene/data_source.cpp
+                      src/scene/light_loader.cpp
                       src/renderers/renderer.cpp
                       src/renderers/simple_renderer.cpp
                       src/gl/gl_resource_manager.cpp)

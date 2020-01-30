@@ -1,4 +1,4 @@
-#include "gfx_utils/resource/data_source.h"
+#include "gfx_utils/scene/data_source.h"
 
 #include "nlohmann/json.hpp"
 

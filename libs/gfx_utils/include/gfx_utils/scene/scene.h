@@ -1,5 +1,5 @@
-#ifndef GFX_UTILS_RESOURCE_RESOURCE_MANAGER_H_
-#define GFX_UTILS_RESOURCE_RESOURCE_MANAGER_H_
+#ifndef GFX_UTILS_SCENE_SCENE_H_
+#define GFX_UTILS_SCENE_SCENE_H_
 
 #include <string>
 #include <vector>
@@ -29,9 +29,9 @@ using EntityNameMap = std::unordered_map<std::string, EntityPtr>;
 using TextureNameMap = std::unordered_map<std::string, TexturePtr>;
 using LightNameMap = std::unordered_map<std::string, LightPtr>;
 
-class ResourceManager {
+class Scene {
 public:
-  bool LoadResourcesFromJson(const std::string& path);
+  bool LoadSceneFromJson(const std::string& path);
 
   bool LoadModelFromFile(const std::string& name,
                           const std::string& mtl_directory,
@@ -70,7 +70,7 @@ private:
 };
 
 template<typename T>
-LightList<T> ResourceManager::GetLightsByType() {
+LightList<T> Scene::GetLightsByType() {
   LightList<T> result_list;
 
   const char* type = T::GetType();
@@ -86,4 +86,4 @@ LightList<T> ResourceManager::GetLightsByType() {
 
 } // namespace gfx_utils
 
-#endif // GFX_UTILS_RESOURCE_RESOURCE_MANAGER_H_
+#endif // GFX_UTILS_SCENE_SCENE_H_

@@ -13,7 +13,7 @@
 #include "gfx_utils/window/window.h"
 #include "gfx_utils/window/camera.h"
 #include "gfx_utils/program.h"
-#include "gfx_utils/resource/resource_manager.h"
+#include "gfx_utils/scene/scene.h"
 #include "gfx_utils/lights.h"
 #include "gfx_utils/mesh.h"
 
@@ -48,7 +48,7 @@ private:
   gfx_utils::Program light_pass_program_;
   gfx_utils::Program shadow_pass_program_;
 
-  gfx_utils::ResourceManager resource_manager_;
+  gfx_utils::Scene scene_;
 
   std::vector<std::shared_ptr<gfx_utils::Spotlight>> spotlights_;
 

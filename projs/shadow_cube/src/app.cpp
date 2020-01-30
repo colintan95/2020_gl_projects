@@ -133,13 +133,6 @@ void App::LightPass() {
 
       LightPass_SetLightUniforms_Mesh(mesh, model_mat, view_mat);
 
-      if (mesh.texcoord_data.size() != 0) {
-        light_pass_program_.GetUniform("has_texcoords").Set(true);
-      }
-      else {
-        light_pass_program_.GetUniform("has_texcoords").Set(false);
-      }
-
       // Set vertex attributes
 
       glBindVertexArray(light_pass_vao_id_);
@@ -154,18 +147,9 @@ void App::LightPass() {
       glEnableVertexAttribArray(1);
       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-      if (mesh.texcoord_data.size() != 0) {
-        light_pass_program_.GetUniform("has_texcoords").Set(true);
-
-        glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id_list_[mesh_idx]);
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-      }
-      else {
-        light_pass_program_.GetUniform("has_texcoords").Set(false);
-
-        glDisableVertexAttribArray(2);
-      }
+      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id_list_[mesh_idx]);
+      glEnableVertexAttribArray(2);
+      glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
       // Each mesh should have a material 
       glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id_list_[mesh_idx]);
@@ -278,6 +262,10 @@ void App::LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh,
                        .Set(light_ptr->diffuse_intensity);
     light_pass_program_.GetUniform("lights", i, "specular_intensity")
                        .Set(light_ptr->specular_intensity);
+    light_pass_program_.GetUniform("lights", i, "direction_mv")
+                       .Set(dir_mv);
+    light_pass_program_.GetUniform("lights", i, "cone_angle")
+                       .Set(light_ptr->cone_angle);
 
     // // TODO(colintan): Don't hardcode this
     glActiveTexture(GL_TEXTURE10 + i);
@@ -310,12 +298,12 @@ void App::Startup() {
     exit(1);
   }
 
-  resource_manager_.LoadResourcesFromJson("resources.json");
+  resource_manager_.LoadResourcesFromJson("assets/resources.json");
 
   // Add custom room entity
   auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
   room_model_ptr->GetMeshes() = 
-      std::move(gfx_utils::CreateRoom(50.f, 20.f, 50.f));
+      std::move(gfx_utils::CreateRoom(80.f, 20.f, 80.f));
   auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
   room_entity_ptr->SetModel(room_model_ptr);
   resource_manager_.AddEntity(room_entity_ptr);
@@ -359,17 +347,12 @@ void App::Startup() {
                    &mesh.normal_data[0], GL_STATIC_DRAW);
       normal_vbo_id_list_.push_back(normal_vbo_id);
 
-      if (mesh.texcoord_data.size() != 0) {
-        GLuint texcoord_vbo_id;
-        glGenBuffers(1, &texcoord_vbo_id);
-        glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
-        glBufferData(GL_ARRAY_BUFFER, mesh.texcoord_data.size() * 2 * sizeof(float),
-                    &mesh.texcoord_data[0], GL_STATIC_DRAW);
-        texcoord_vbo_id_list_.push_back(texcoord_vbo_id);
-      }
-      else {
-        texcoord_vbo_id_list_.push_back(0);
-      }
+      GLuint texcoord_vbo_id;
+      glGenBuffers(1, &texcoord_vbo_id);
+      glBindBuffer(GL_ARRAY_BUFFER, texcoord_vbo_id);
+      glBufferData(GL_ARRAY_BUFFER, mesh.texcoord_data.size() * 2 * sizeof(float),
+                   &mesh.texcoord_data[0], GL_STATIC_DRAW);
+      texcoord_vbo_id_list_.push_back(texcoord_vbo_id);
 
       if (mesh.material_list.size() != 0) {
         GLuint mtl_vbo_id;

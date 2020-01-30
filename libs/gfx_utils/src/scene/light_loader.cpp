@@ -1,8 +1,8 @@
-#include "gfx_utils/resource/light_loader.h"
+#include "gfx_utils/scene/light_loader.h"
 
 namespace gfx_utils {
 
-  std::shared_ptr<Light> LoadPointLight(const DataSource& data_src) {
+std::shared_ptr<Light> LoadPointLight(const DataSource& data_src) {
   auto light = std::make_shared<PointLight>();
   
   light->position = data_src.GetEntry("position").val_vec3;
@@ -12,7 +12,6 @@ namespace gfx_utils {
 
   return std::dynamic_pointer_cast<Light>(light);
 }
-
 
 std::shared_ptr<Light> LoadSpotlight(const DataSource& data_src) {
   auto light = std::make_shared<Spotlight>();

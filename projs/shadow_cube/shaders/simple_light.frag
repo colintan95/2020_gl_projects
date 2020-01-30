@@ -11,12 +11,15 @@ out vec4 out_color;
 
 uniform vec3 camera_pos;
 
-struct PointLight {
+struct SpotLight {
   bool is_active;
 
   vec3 position_mv; // in modelview space
   vec3 diffuse_intensity;
   vec3 specular_intensity;
+
+  vec3 direction_mv; // in modelview space (should multiply by normal mat)
+  float cone_angle; // in radians
 
   sampler2D shadow_tex;
 };
@@ -37,7 +40,7 @@ struct Material {
   sampler2D specular_texture;
 };
 
-uniform PointLight lights[5];
+uniform SpotLight lights[5];
 uniform Material materials[5];
 
 uniform vec3 ambient_intensity;
@@ -82,6 +85,12 @@ void main() {
     // TODO(colintan): Remove this once everything else is working
     attenuation = 1;
 
+    // See if there's a better way to do this
+    // Returns 0 if the light ray is outside the cone, 1 otherwise
+    float cone_occlude = 
+        (dot(normalize(-light_vec), normalize(lights[i].direction_mv)) 
+          - cos(lights[i].cone_angle / 2.0)) > 0 ? 1.0 : 0.0;
+
     // To normalized device coordinates
     vec3 shadow_coords = 
         (frag_shadow_coords[i].xyz / frag_shadow_coords[i].w) * 0.5 + 0.5;
@@ -96,12 +105,13 @@ void main() {
 
     float diffuse_dot = max(dot(normalize(light_vec), normalize(frag_normal)), 
                             0.0);
-    float diffuse_coeff = shadow_occlude * attenuation * diffuse_dot;
+    float diffuse_coeff = shadow_occlude * cone_occlude * attenuation * 
+        diffuse_dot;
 
     vec3 half_vec = normalize(normalize(light_vec) + normalize(view_vec));
 
     float specular_dot = max(dot(half_vec, normalize(frag_normal)), 0.0);
-    float specular_coeff = shadow_occlude * attenuation *
+    float specular_coeff = shadow_occlude * cone_occlude * attenuation *
         pow(specular_dot, materials[frag_mtl_id].shininess);
 
     diffuse  += mtl_diffuse  * lights[i].diffuse_intensity  * diffuse_coeff;

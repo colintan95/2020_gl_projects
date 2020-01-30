@@ -3,7 +3,7 @@
 namespace gfx_utils {
 
 void GLResourceManager::CreateGLResources() {
-  const auto& models = resource_manager_->GetModels();
+  const auto& models = scene_->GetModels();
 
   for (auto model_ptr : models) {
     for (gfx_utils::Mesh& mesh : model_ptr->GetMeshes()) {
@@ -12,7 +12,7 @@ void GLResourceManager::CreateGLResources() {
   }
 
   // Maps the texture name to the corresponding Texture pointer
-  auto& texture_name_map = resource_manager_->GetTextureNameMap();
+  auto& texture_name_map = scene_->GetTextureNameMap();
 
   // Allocate textures 
   for (auto it = texture_name_map.begin(); it != texture_name_map.end(); ++it) {
@@ -141,7 +141,7 @@ GLuint GLResourceManager::GetTextureId(TextureId id) {
 }
 
 GLuint GLResourceManager::GetTextureId(const std::string& texname) {
-  auto texture_ptr = resource_manager_->GetTexture(texname);
+  auto texture_ptr = scene_->GetTexture(texname);
 
   return texture_gl_id_map_[texture_ptr->id];
 }
