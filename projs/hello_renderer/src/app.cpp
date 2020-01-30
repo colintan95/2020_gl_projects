@@ -36,7 +36,7 @@ void App::MainLoop() {
   bool should_quit = false;
 
   while (!should_quit) {
-    renderer_.Render(resource_manager_.GetEntities());
+    renderer_.Render(scene_.GetEntities());
 
     window_.SwapBuffers();
     window_.TickMainLoop();
@@ -58,7 +58,7 @@ void App::Startup() {
     exit(1);
   }
 
-  resource_manager_.LoadResourcesFromJson("assets/resources.json");
+  scene_.LoadSceneFromJson("assets/scene.json");
 
   // Add custom room entity
   auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
@@ -66,9 +66,9 @@ void App::Startup() {
       std::move(gfx_utils::CreateRoom(30.f, 20.f, 80.f));
   auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
   room_entity_ptr->SetModel(room_model_ptr);
-  resource_manager_.AddEntity(room_entity_ptr);
+  scene_.AddEntity(room_entity_ptr);
 
-  gl_resource_manager_.SetResourceManager(&resource_manager_);
+  gl_resource_manager_.SetScene(&scene_);
 
   gl_resource_manager_.CreateGLResources();
 

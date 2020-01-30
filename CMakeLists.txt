@@ -52,4 +52,5 @@ add_subdirectory(libs/gfx_utils)
 # Place targets for the graphics projects here
 #add_subdirectory(hello_sponza)
 add_subdirectory(projs/shadow_map)
-#add_subdirectory(projs/shadow_cube)
+add_subdirectory(projs/hello_renderer)
+add_subdirectory(projs/shadow_cube)
