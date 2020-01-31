@@ -5,23 +5,19 @@ in vec3 frag_normal;
 in vec2 frag_texcoord;
 flat in uint frag_mtl_id;
 
-in vec4 frag_shadow_coords[5]; // one for each light
+uniform vec3 camera_pos;
 
 out vec4 out_color;
 
-uniform vec3 camera_pos;
-
-struct SpotLight {
+struct PointLight {
   bool is_active;
 
-  vec3 position_mv; // in modelview space
+  vec3 position; 
   vec3 diffuse_intensity;
   vec3 specular_intensity;
 
-  vec3 direction_mv; // in modelview space (should multiply by normal mat)
-  float cone_angle; // in radians
-
-  sampler2D shadow_tex;
+  samplerCube shadow_tex;
+  float far_plane;
 };
 
 struct Material {
@@ -40,10 +36,22 @@ struct Material {
   sampler2D specular_texture;
 };
 
-uniform SpotLight lights[5];
+uniform PointLight lights[5];
 uniform Material materials[5];
 
 uniform vec3 ambient_intensity;
+
+float CalcShadowOcclusion(vec3 frag_pos, int light_idx) {
+  vec3 dist = frag_pos - lights[light_idx].position;
+
+  float closest_depth = texture(lights[light_idx].shadow_tex, dist).r;
+
+  float frag_depth = length(dist) / lights[light_idx].far_plane;
+
+  float shadow_occlude = frag_depth - 0.1 < closest_depth ? 1.0 : 0.0;
+
+  return shadow_occlude;
+}
 
 void main() {   
   vec3 mtl_emission = materials[frag_mtl_id].emission_color;
@@ -76,8 +84,8 @@ void main() {
       continue;
     }
 
-    vec3 light_vec = lights[i].position_mv - frag_pos;
-    vec3 view_vec = camera_pos - frag_pos;
+    vec3 light_vec = lights[i].position - frag_pos;
+    vec3 view_vec = camera_pos - frag_pos; // Since we're in eye space
 
     float light_dist = length(light_vec);
     float attenuation = pow(20.0 / max(light_dist, 20.0), 2);
@@ -85,33 +93,18 @@ void main() {
     // TODO(colintan): Remove this once everything else is working
     attenuation = 1;
 
-    // See if there's a better way to do this
-    // Returns 0 if the light ray is outside the cone, 1 otherwise
-    float cone_occlude = 
-        (dot(normalize(-light_vec), normalize(lights[i].direction_mv)) 
-          - cos(lights[i].cone_angle / 2.0)) > 0 ? 1.0 : 0.0;
-
-    // To normalized device coordinates
-    vec3 shadow_coords = 
-        (frag_shadow_coords[i].xyz / frag_shadow_coords[i].w) * 0.5 + 0.5;
-
-    float shadow_tex_depth = 
-        texture2D(lights[i].shadow_tex, shadow_coords.xy).r;
-
-    // Slight bias to prevent shadow acne
     // Returns 1.0 if there's no shadow, and 0.0 if there is
-    float shadow_occlude = 
-        shadow_coords.z - 0.005 < shadow_tex_depth ? 1.0 : 0.0;  
+    float shadow_occlude = CalcShadowOcclusion(frag_pos, i);
 
     float diffuse_dot = max(dot(normalize(light_vec), normalize(frag_normal)), 
                             0.0);
-    float diffuse_coeff = shadow_occlude * cone_occlude * attenuation * 
+    float diffuse_coeff = shadow_occlude * attenuation * 
         diffuse_dot;
 
     vec3 half_vec = normalize(normalize(light_vec) + normalize(view_vec));
 
     float specular_dot = max(dot(half_vec, normalize(frag_normal)), 0.0);
-    float specular_coeff = shadow_occlude * cone_occlude * attenuation *
+    float specular_coeff = shadow_occlude * attenuation *
         pow(specular_dot, materials[frag_mtl_id].shininess);
 
     diffuse  += mtl_diffuse  * lights[i].diffuse_intensity  * diffuse_coeff;

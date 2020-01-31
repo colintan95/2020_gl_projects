@@ -20,9 +20,25 @@ static const std::string kLightPassFragShaderPath = "shaders/simple_light.frag";
 
 static const std::string kShadowPassVertShaderPath = "shaders/shadow_pass.vert";
 static const std::string kShadowPassFragShaderPath = "shaders/shadow_pass.frag";
+static const std::string kShadowPassGeomShaderPath = "shaders/shadow_pass.geom";
 
 static const int kShadowTexWidth = 1024;
 static const int kShadowTexHeight = 1024;
+
+static const float kShadowNearPlane = 1.f;
+static const float kShadowFarPlane = 30.f;
+
+static const glm::vec3 cubemap_dirs[] = {
+  {1.f, 0.f, 0.f}, {-1.f, 0.f, 0.f},
+  {0.f, 1.f, 0.f}, {0.f, -1.f, 0.f},
+  {0.f, 0.f, 1.f}, {0.f, 0.f, -1.f}
+};
+
+static const glm::vec3 cubemap_up[] = {
+  {0.f, -1.f, 0.f}, {0.f, -1.f, 0.f},
+  {0.f, 0.f, 1.f}, {0.f, 0.f, -1.f},
+  {0.f, -1.f, 0.f}, {0.f, -1.f, 0.f}
+};
 
 void App::Run() {
   Startup();
@@ -50,8 +66,8 @@ void App::MainLoop() {
 }
 
 void App::ShadowPass() {
-  for (int i = 0; i < spotlights_.size(); ++i) {
-    auto light_ptr = spotlights_[i];
+  for (int i = 0; i < lights_.size(); ++i) {
+    auto light_ptr = lights_[i];
 
     glUseProgram(shadow_pass_program_.GetProgramId());
     glViewport(0, 0, kShadowTexWidth, kShadowTexHeight);
@@ -60,6 +76,12 @@ void App::ShadowPass() {
     glClear(GL_DEPTH_BUFFER_BIT);
 
     glBindVertexArray(shadow_pass_vao_id_);
+
+    float near_plane = kShadowNearPlane;
+    float far_plane = kShadowFarPlane;
+
+    shadow_pass_program_.GetUniform("light_post").Set(light_ptr->position);
+    shadow_pass_program_.GetUniform("far_plane").Set(far_plane);
 
     const auto& entities = scene_.GetEntities();
 
@@ -70,19 +92,26 @@ void App::ShadowPass() {
 
       for (auto mesh: entity_ptr->GetModel()->GetMeshes()) {
         glm::mat4 model_mat = entity_ptr->CalcTransform();
-        glm::mat4 view_mat = 
-            glm::lookAt(light_ptr->position,
-                        light_ptr->position + light_ptr->direction,
-                        light_ptr->camera_up);
-        glm::mat4 proj_mat = glm::perspective(light_ptr->cone_angle,
-                                              1.f, 5.f, 30.f);
-        glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
 
-        shadow_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);
+        shadow_pass_program_.GetUniform("model_mat").Set(model_mat);
+
+        glm::mat4 proj_mat = glm::perspective(glm::radians(90.f), 1.f,
+                                              near_plane, far_plane);
+
+        // TODO(colintan): Figure out why the camera ups must have these vals
+        for (int i = 0; i < 6; ++i) {
+          glm::mat4 view_mat = 
+              glm::lookAt(light_ptr->position,
+                          light_ptr->position + cubemap_dirs[i],
+                          cubemap_up[i]);
+          glm::mat4 shadow_mat = proj_mat * view_mat;
+
+          shadow_pass_program_.GetUniform("shadow_mats", i).Set(shadow_mat);
+        }
 
         GLuint pos_vbo_id = 
             resource_manager_.GetMeshVboId(mesh.id, 
-                                           gfx_utils::kVertTypePosition);
+                                          gfx_utils::kVertTypePosition);
         glBindBuffer(GL_ARRAY_BUFFER, pos_vbo_id);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
@@ -111,7 +140,7 @@ void App::LightPass() {
   glm::mat4 view_mat = camera_.CalcViewMatrix();
   glm::mat4 proj_mat = glm::perspective(glm::radians(30.f),
                                         window_.GetAspectRatio(),
-                                        0.1f, 1000.f);
+                                        0.1f, 1000.f);                                    
 
   light_pass_program_.GetUniform("camera_pos")
                      .Set(camera_.GetCameraLocation());
@@ -133,7 +162,7 @@ void App::LightPass() {
 
       LightPass_SetMaterialUniforms_Mesh(mesh);
 
-      LightPass_SetLightUniforms_Mesh(mesh, model_mat, view_mat);
+      LightPass_SetLightUniforms_Mesh(mesh);
 
       // Set vertex attributes
 
@@ -184,13 +213,9 @@ void App::LightPass_SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
   glm::mat4 mv_mat = view_mat * model_mat;
   glm::mat4 mvp_mat = proj_mat * mv_mat;
 
+  light_pass_program_.GetUniform("model_mat").Set(model_mat);
   light_pass_program_.GetUniform("mv_mat").Set(mv_mat);
-  light_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);
-
-  // TODO(colintan): Check that this is computing correctly
-  glm::mat3 normal_mat =
-      glm::mat3(glm::transpose(glm::inverse(mv_mat)));
-  light_pass_program_.GetUniform("normal_mat").Set(normal_mat);                                              
+  light_pass_program_.GetUniform("mvp_mat").Set(mvp_mat);                                    
 }
 
 void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
@@ -259,49 +284,28 @@ void App::LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh) {
   }
 }
 
-void App::LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh,
-                                          glm::mat4& model_mat,
-                                          glm::mat4& view_mat) {
-  for (int i = 0; i < spotlights_.size(); ++i) {  
-    auto light_ptr = spotlights_[i];
+void App::LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh) {
+
+  for (int i = 0; i < lights_.size(); ++i) {  
+    auto light_ptr = lights_[i];
 
     light_pass_program_.GetUniform("lights", i, "is_active").Set(1);
 
-    // Position of light in modelview space
-    glm::vec3 pos_mv =
-        glm::vec3(view_mat * glm::vec4(light_ptr->position, 1.f));
-    glm::vec3 dir_mv =
-        glm::vec3(glm::mat3(glm::transpose(glm::inverse(view_mat))) *
-                  light_ptr->direction);
-
-    light_pass_program_.GetUniform("lights", i, "position_mv")
-                       .Set(pos_mv);
+    light_pass_program_.GetUniform("lights", i, "position")
+                       .Set(light_ptr->position);
     light_pass_program_.GetUniform("lights", i, "diffuse_intensity")
                        .Set(light_ptr->diffuse_intensity);
     light_pass_program_.GetUniform("lights", i, "specular_intensity")
                        .Set(light_ptr->specular_intensity);
-    light_pass_program_.GetUniform("lights", i, "direction_mv")
-                       .Set(dir_mv);
-    light_pass_program_.GetUniform("lights", i, "cone_angle")
-                       .Set(light_ptr->cone_angle);
 
     // // TODO(colintan): Don't hardcode this
     glActiveTexture(GL_TEXTURE10 + i);
-    glBindTexture(GL_TEXTURE_2D, shadow_tex_id_list_[i]);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadow_tex_id_list_[i]);
 
     light_pass_program_.GetUniform("lights", i, "shadow_tex").Set(10 + i);
 
-    glm::mat4 light_view_mat =
-      glm::lookAt(light_ptr->position,
-                  light_ptr->position + light_ptr->direction,
-                  light_ptr->camera_up);
-    glm::mat4 light_proj_mat = glm::perspective(light_ptr->cone_angle,
-                                                1.f, 5.f, 30.f);
-
-    glm::mat4 shadow_mat = light_proj_mat * light_view_mat *
-        model_mat;
-
-    light_pass_program_.GetUniform("shadow_mats", i).Set(shadow_mat);
+    light_pass_program_.GetUniform("lights", i, "far_plane")
+                       .Set(kShadowFarPlane);
   }
 }
 
@@ -321,7 +325,7 @@ void App::Startup() {
   // Add custom room entity
   auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
   room_model_ptr->GetMeshes() = 
-      std::move(gfx_utils::CreateRoom(80.f, 20.f, 80.f));
+      std::move(gfx_utils::CreateRoom(40.f, 10.f, 40.f));
   auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
   room_entity_ptr->SetModel(room_model_ptr);
   scene_.AddEntity(room_entity_ptr);
@@ -330,15 +334,15 @@ void App::Startup() {
 
   resource_manager_.CreateGLResources();
 
-  spotlights_ = scene_.GetLightsByType<gfx_utils::Spotlight>();
+  lights_ = scene_.GetLightsByType<gfx_utils::PointLight>();
 
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
 
-  if (!light_pass_program_.CreateProgram(kLightPassVertShaderPath, 
-                                         kLightPassFragShaderPath)) {
+  if (!light_pass_program_.CreateFromFiles(kLightPassVertShaderPath, 
+                                           kLightPassFragShaderPath)) {
     std::cerr << "Could not create light pass program." << std::endl;
     exit(1);
   }
@@ -346,31 +350,38 @@ void App::Startup() {
 
   glGenVertexArrays(1, &light_pass_vao_id_);
 
-  if (!shadow_pass_program_.CreateProgram(kShadowPassVertShaderPath,
-                                          kShadowPassFragShaderPath)) {
+  if (!shadow_pass_program_.CreateFromFiles(kShadowPassVertShaderPath,
+                                            kShadowPassFragShaderPath,
+                                            kShadowPassGeomShaderPath)) {
     std::cerr << "Could not create shadow pass program." << std::endl;
     exit(1);
   }
   glUseProgram(shadow_pass_program_.GetProgramId());
 
-  for (auto light_ptr : spotlights_) {
+  for (auto light_ptr : lights_) {
     GLuint shadow_tex_id;
     glGenTextures(1, &shadow_tex_id);
-    glBindTexture(GL_TEXTURE_2D, shadow_tex_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowTexWidth,
-                  kShadowTexHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadow_tex_id);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    for (int i = 0; i < 6; ++i) {   
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
+                   kShadowTexWidth, kShadowTexHeight, 0, GL_DEPTH_COMPONENT, 
+                   GL_FLOAT, NULL);
+    }
+
     shadow_tex_id_list_.push_back(shadow_tex_id);
 
     GLuint shadow_fbo_id;
     glGenFramebuffers(1, &shadow_fbo_id);
     glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_id);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-                           shadow_tex_id, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow_tex_id, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     shadow_fbo_id_list_.push_back(shadow_fbo_id);
   }
 
@@ -380,17 +391,17 @@ void App::Startup() {
 void App::Cleanup() {
   glDeleteVertexArrays(1, &shadow_pass_vao_id_);
   
-  glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list_.size()),
+  glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list_.size()), 
                        &shadow_fbo_id_list_[0]);
 
-  glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list_.size()),
+  glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list_.size()), 
                    &shadow_tex_id_list_[0]);
 
-  shadow_pass_program_.DestroyProgram();
+  shadow_pass_program_.Destroy();
 
   glDeleteVertexArrays(1, &light_pass_vao_id_);
   
-  light_pass_program_.DestroyProgram();
+  light_pass_program_.Destroy();
 
   resource_manager_.Cleanup();
 

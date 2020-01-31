@@ -35,10 +35,13 @@ private:
 
 class Program {
 public:
-  bool CreateProgram(const std::string& vert_shader_path, 
-                     const std::string& frag_shader_path);
-  bool CreateProgram(const char* vert_shader_src, const char* frag_shader_src);
-  void DestroyProgram();
+  bool CreateFromFiles(const std::string& vert_shader_path, 
+                       const std::string& frag_shader_path,
+                       const std::string& geom_shader_path = "");
+  bool CreateFromSource(const std::string& vert_shader_src, 
+                        const std::string& frag_shader_src,
+                        const std::string& geom_shader_src = "");
+  void Destroy();
 
   // e.g. program.GetUniform("mvp_mat").Set(...)
   Uniform GetUniform(const std::string& var);
@@ -50,6 +53,7 @@ public:
 
 private:
   bool LoadShaderSource(std::string* out_str, const std::string& path);
+  bool CompilerShader(GLuint shader_id, const char* shader_src);
 
 private:
   GLuint program_id_;

@@ -34,9 +34,7 @@ private:
                                            glm::mat4& view_mat,
                                            glm::mat4& proj_mat);
   void LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh);
-  void LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh,
-                                       glm::mat4& model_mat,
-                                       glm::mat4& view_mat);
+  void LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh);
 
   void Startup();
 
@@ -53,7 +51,7 @@ private:
 
   gfx_utils::GLResourceManager resource_manager_;
 
-  std::vector<std::shared_ptr<gfx_utils::Spotlight>> spotlights_;
+  std::vector<std::shared_ptr<gfx_utils::PointLight>> lights_;
 
   GLuint light_pass_vao_id_;
 
