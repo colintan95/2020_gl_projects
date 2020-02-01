@@ -70,7 +70,7 @@ bool SimpleRenderer::Initialize() {
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
 
-  if (!program_.CreateProgram(vert_shader_src, frag_shader_src)) {
+  if (!program_.CreateFromSource(vert_shader_src, frag_shader_src)) {
     return false;
   }
 
@@ -83,6 +83,8 @@ bool SimpleRenderer::Initialize() {
 
 void SimpleRenderer::Destroy() {
   glDeleteVertexArrays(1, &vao_id_);
+
+  // TODO(colintan): Destroy the program only when it was successfully created
 }
 
 void SimpleRenderer::Render(const EntityList& entities) {

@@ -17,6 +17,10 @@ const double kPi = 3.14159265358979323846;
 
 const double kMouseLocNoValue = std::numeric_limits<double>::max();
 const float kFpsModeLookSpeed = 0.001f;
+const float kPanModeSpeed = 0.1f;
+const float kFpsModeWalkSpeed = 0.2f;
+const float kFpsModeStrafeSpeed = 0.1f;
+const float kRotateModeSpeed = static_cast<float>(kPi) / 180.f;
 
 namespace gfx_utils {
 
@@ -70,7 +74,7 @@ void Camera::PanCamera(CameraAction action) {
   assert(action == CAMERA_PAN_LEFT || action == CAMERA_PAN_RIGHT ||
          action == CAMERA_PAN_UP   || action == CAMERA_PAN_DOWN);
 
-  float d = 0.5f;
+  float d = kPanModeSpeed;
 
   switch (action) {
   case CAMERA_PAN_LEFT:
@@ -92,7 +96,7 @@ void Camera::RotateCamera(CameraAction action) {
   assert(action == CAMERA_ROTATE_LEFT || action == CAMERA_ROTATE_RIGHT ||
          action == CAMERA_ROTATE_UP   || action == CAMERA_ROTATE_DOWN);
 
-  float d = static_cast<float>(kPi) / 120.f;
+  float d = kRotateModeSpeed;
 
   switch (action) {
   case CAMERA_ROTATE_LEFT:
@@ -114,8 +118,8 @@ void Camera::FpsMoveCamera(CameraAction action) {
   assert(action == CAMERA_FPS_LEFT    || action == CAMERA_FPS_RIGHT ||
          action == CAMERA_FPS_FORWARD || action == CAMERA_FPS_BACKWARD);
 
-  float walk_speed = 0.8f;
-  float strafe_speed = 0.5f;
+  float walk_speed = kFpsModeWalkSpeed;
+  float strafe_speed = kFpsModeStrafeSpeed;
 
   switch (action) {
   case CAMERA_FPS_LEFT:

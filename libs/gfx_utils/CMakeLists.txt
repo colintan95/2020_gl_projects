@@ -1,13 +1,7 @@
-add_library(gfx_utils src/mesh.cpp src/primitives.cpp src/entity.cpp
-                      src/primitives.cpp src/program.cpp src/texture.cpp 
-                      src/window/window.cpp src/window/camera.cpp
-                      # src/debug/wireframe_drawer.cpp
-                      src/scene/scene.cpp
-                      src/scene/data_source.cpp
-                      src/scene/light_loader.cpp
-                      src/renderers/renderer.cpp
-                      # src/renderers/simple_renderer.cpp
-                      src/gl/gl_resource_manager.cpp)
+add_library(gfx_utils "")
+
+# Adds the source files
+add_subdirectory(src)
 
 target_include_directories(gfx_utils PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include")
@@ -28,6 +22,7 @@ target_include_directories(gfx_utils PUBLIC "${JSON_INCLUDE_DIRS}")
 target_include_directories(gfx_utils PUBLIC "${OPENGL_INCLUDE_DIRS}")
 target_link_libraries(gfx_utils PUBLIC OpenGL::GL)
 target_link_libraries(gfx_utils PUBLIC OpenGL::GLU)
+
 
 # Use GLEW
 target_include_directories(gfx_utils PUBLIC "${GLEW_INCLUDE_DIRS}")

@@ -3,26 +3,18 @@
     {
       "name": "cube1",
       "model": "cube",
-      "position": [5.0, 0.0, 0.0],
-      "scale": [2.5, 2.5, 2.5]
+      "position": [2.5, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
     },
     {
       "name": "cube2",
       "model": "cube",
-      "position": [-10.0, 0.0, 0.0],
-      "scale": [2.5, 2.5, 2.5]
+      "position": [-2.5, 0.0, 0.0]
     },
     {
       "name": "cube3",
       "model": "cube",
-      "position": [0.0, 0.0, 7.5],
-      "scale": [2.5, 2.5, 2.5]
-    },
-    {
-      "name": "cube4",
-      "model": "cube",
-      "position": [0.0, 0.0, -10.0],
-      "scale": [2.5, 2.5, 2.5]
+      "position": [0.0, 0.0, -2.5]
     }
   ],
   "models": [
@@ -34,9 +26,9 @@
   ],
   "lights": [
     {
-      "name": "light",
+      "name": "light1",
       "type": "point_light",
-      "position": [0.0, 0.0, 0.0],
+      "position": [0.0, 1.5, 0.0],
       "diffuse_intensity": [0.2, 0.2, 0.2],
       "specular_intensity": [0.5, 0.5, 0.5],
       "camera_up": [0.0, 1.0, 0.0] 

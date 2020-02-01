@@ -1,0 +1,15 @@
+{
+  "entities": [
+    {
+      "name": "sponza",
+      "model": "sponza"
+    }
+  ],
+  "models": [
+    {
+      "name": "sponza",
+      "file": "assets/sponza_original/sponza.obj",
+      "mtl_dir": "assets/sponza_original"
+    }
+  ]
+}

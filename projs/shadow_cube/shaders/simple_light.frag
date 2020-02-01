@@ -48,7 +48,7 @@ float CalcShadowOcclusion(vec3 frag_pos, int light_idx) {
 
   float frag_depth = length(dist) / lights[light_idx].far_plane;
 
-  float shadow_occlude = frag_depth - 0.1 < closest_depth ? 1.0 : 0.0;
+  float shadow_occlude = frag_depth - 0.05 < closest_depth ? 1.0 : 0.0;
 
   return shadow_occlude;
 }
@@ -88,7 +88,7 @@ void main() {
     vec3 view_vec = camera_pos - frag_pos; // Since we're in eye space
 
     float light_dist = length(light_vec);
-    float attenuation = pow(20.0 / max(light_dist, 20.0), 2);
+    float attenuation = 1.0 / (1.0 + 0.2 * pow(light_dist, 2));
 
     // TODO(colintan): Remove this once everything else is working
     attenuation = 1;

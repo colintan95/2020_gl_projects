@@ -26,7 +26,7 @@ static const int kShadowTexWidth = 1024;
 static const int kShadowTexHeight = 1024;
 
 static const float kShadowNearPlane = 1.f;
-static const float kShadowFarPlane = 30.f;
+static const float kShadowFarPlane = 25.f;
 
 static const glm::vec3 cubemap_dirs[] = {
   {1.f, 0.f, 0.f}, {-1.f, 0.f, 0.f},
@@ -325,7 +325,7 @@ void App::Startup() {
   // Add custom room entity
   auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
   room_model_ptr->GetMeshes() = 
-      std::move(gfx_utils::CreateRoom(40.f, 10.f, 40.f));
+      std::move(gfx_utils::CreateRoom(10.f, 5.f, 10.f));
   auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
   room_entity_ptr->SetModel(room_model_ptr);
   scene_.AddEntity(room_entity_ptr);

@@ -41,10 +41,6 @@ struct Mesh {
 
 using MeshList = std::vector<std::shared_ptr<Mesh>>;
 
-bool CreateMeshesFromFile(std::vector<Mesh>* out_meshes, 
-                          const std::string& mtl_directory,
-                          const std::string& mesh_path);
-
 //bool CreateMeshFromFileUnindexed(Mesh *out_mesh, const std::string& path);
 
 void ClearMesh(Mesh *mesh);

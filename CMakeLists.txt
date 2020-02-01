@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 project(gl_projects)
 
 # Find OpenGL
@@ -54,3 +54,4 @@ add_subdirectory(libs/gfx_utils)
 #add_subdirectory(projs/shadow_map)
 #add_subdirectory(projs/hello_renderer)
 add_subdirectory(projs/shadow_cube)
+add_subdirectory(projs/shadow_sponza)

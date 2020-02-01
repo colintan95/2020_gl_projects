@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <memory>
 
+#include "model_loader.h"
+
 #include "gfx_utils/lights.h"
 #include "gfx_utils/model.h"
 #include "gfx_utils/entity.h"
@@ -32,10 +34,6 @@ using LightNameMap = std::unordered_map<std::string, LightPtr>;
 class Scene {
 public:
   bool LoadSceneFromJson(const std::string& path);
-
-  bool LoadModelFromFile(const std::string& name,
-                          const std::string& mtl_directory,
-                          const std::string& path);
 
   void AddEntity(EntityPtr entity);
 
@@ -67,6 +65,8 @@ private:
   ModelList models_list_;
   EntityList entities_list_;
   std::vector<LightListEntry> lights_list_;
+
+  ModelLoader model_loader_;
 };
 
 template<typename T>
