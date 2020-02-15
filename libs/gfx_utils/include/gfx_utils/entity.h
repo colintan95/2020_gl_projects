@@ -18,7 +18,7 @@ class Entity {
 public:
   Entity(const std::string& name);
 
-  glm::mat4 CalcTransform() const;
+  glm::mat4 ComputeTransform() const;
 
   void SetModel(std::shared_ptr<Model> model);
   void SetParent(std::shared_ptr<Entity> parent);

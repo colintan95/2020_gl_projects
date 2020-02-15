@@ -40,7 +40,16 @@ bool Scene::LoadSceneFromJson(const std::string& path) {
     const std::string& mtl_dir = model_prop["mtl_dir"];
     const std::string& file = model_prop["file"];
 
-    auto model_ptr = model_loader_.LoadModelFromFile(name, mtl_dir, file);
+    bool indexed = true;
+
+    auto indexed_it = model_prop.find("indexed");
+    if (indexed_it != model_prop.end()) {
+      indexed = model_prop["indexed"];
+      std::cout << "Indexed: " << indexed << std::endl;
+    }
+
+    auto model_ptr = model_loader_.LoadModelFromFile(
+        name, mtl_dir, file, indexed);
 
     if (!model_ptr) {
       std::cerr << "Could not load model: " << name;

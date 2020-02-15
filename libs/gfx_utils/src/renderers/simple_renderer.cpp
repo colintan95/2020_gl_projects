@@ -113,7 +113,7 @@ void SimpleRenderer::Render(const EntityList& entities) {
     }
 
     for (auto& mesh : entity_ptr->GetModel()->GetMeshes()) {
-      glm::mat4 model_mat = entity_ptr->CalcTransform();
+      glm::mat4 model_mat = entity_ptr->ComputeTransform();
 
       SetTransformUniforms_Mesh(mesh, model_mat, view_mat, proj_mat);
 

@@ -52,9 +52,9 @@ void App::MainLoop() {
   bool should_quit = false;
 
   while (!should_quit) {
-    // ShadowPass();
+    ShadowPass();
 
-    // LightPass();
+    LightPass();
 
     window_.SwapBuffers();
     window_.TickMainLoop();
@@ -91,7 +91,7 @@ void App::ShadowPass() {
       }
 
       for (auto mesh: entity_ptr->GetModel()->GetMeshes()) {
-        glm::mat4 model_mat = entity_ptr->CalcTransform();
+        glm::mat4 model_mat = entity_ptr->ComputeTransform();
 
         shadow_pass_program_.GetUniform("model_mat").Set(model_mat);
 
@@ -116,10 +116,7 @@ void App::ShadowPass() {
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-        GLuint ibo_id = resource_manager_.GetMeshIboId(mesh.id);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
-        glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT,
-                        (void*)0);
+        glDrawArrays(GL_TRIANGLES, 0, mesh.num_verts);
       }
     }
 
@@ -156,7 +153,7 @@ void App::LightPass() {
     }
 
     for (auto& mesh : entity_ptr->GetModel()->GetMeshes()) {
-      glm::mat4 model_mat = entity_ptr->CalcTransform();
+      glm::mat4 model_mat = entity_ptr->ComputeTransform();
       
       LightPass_SetTransformUniforms_Mesh(mesh, model_mat, view_mat, proj_mat);
 
@@ -196,10 +193,7 @@ void App::LightPass() {
       glEnableVertexAttribArray(3);
       glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
 
-      GLuint ibo_id = resource_manager_.GetMeshIboId(mesh.id);
-      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
-
-      glDrawElements(GL_TRIANGLES, mesh.num_verts, GL_UNSIGNED_INT, (void*)0);
+      glDrawArrays(GL_TRIANGLES, 0, mesh.num_verts);
     }
   }
 
@@ -322,86 +316,82 @@ void App::Startup() {
 
   scene_.LoadSceneFromJson("assets/scene.json");
 
-  // Add custom room entity
-  // auto room_model_ptr = std::make_shared<gfx_utils::Model>("room");
-  // room_model_ptr->GetMeshes() = 
-  //     std::move(gfx_utils::CreateRoom(10.f, 5.f, 10.f));
-  // auto room_entity_ptr = std::make_shared<gfx_utils::Entity>("room");
-  // room_entity_ptr->SetModel(room_model_ptr);
-  // scene_.AddEntity(room_entity_ptr);
+  resource_manager_.SetScene(&scene_);
 
-  // resource_manager_.SetScene(&scene_);
+  resource_manager_.CreateGLResources();
 
-  // resource_manager_.CreateGLResources();
+  lights_ = scene_.GetLightsByType<gfx_utils::PointLight>();
 
-  // lights_ = scene_.GetLightsByType<gfx_utils::PointLight>();
+  glEnable(GL_TEXTURE_2D);
+  glEnable(GL_DEPTH_TEST);
+  glDepthFunc(GL_LESS);
+  glEnable(GL_CULL_FACE);
 
-  // glEnable(GL_TEXTURE_2D);
-  // glEnable(GL_DEPTH_TEST);
-  // glDepthFunc(GL_LESS);
-  // glEnable(GL_CULL_FACE);
+  if (!light_pass_program_.CreateFromFiles(kLightPassVertShaderPath, 
+                                           kLightPassFragShaderPath)) {
+    std::cerr << "Could not create light pass program." << std::endl;
+    exit(1);
+  }
+  glUseProgram(light_pass_program_.GetProgramId());
 
-  // if (!light_pass_program_.CreateFromFiles(kLightPassVertShaderPath, 
-  //                                          kLightPassFragShaderPath)) {
-  //   std::cerr << "Could not create light pass program." << std::endl;
-  //   exit(1);
-  // }
-  // glUseProgram(light_pass_program_.GetProgramId());
+  glGenVertexArrays(1, &light_pass_vao_id_);
 
-  // glGenVertexArrays(1, &light_pass_vao_id_);
+  if (!shadow_pass_program_.CreateFromFiles(kShadowPassVertShaderPath,
+                                            kShadowPassFragShaderPath,
+                                            kShadowPassGeomShaderPath)) {
+    std::cerr << "Could not create shadow pass program." << std::endl;
+    exit(1);
+  }
+  glUseProgram(shadow_pass_program_.GetProgramId());
 
-  // if (!shadow_pass_program_.CreateFromFiles(kShadowPassVertShaderPath,
-  //                                           kShadowPassFragShaderPath,
-  //                                           kShadowPassGeomShaderPath)) {
-  //   std::cerr << "Could not create shadow pass program." << std::endl;
-  //   exit(1);
-  // }
-  // glUseProgram(shadow_pass_program_.GetProgramId());
+  for (auto light_ptr : lights_) {
+    GLuint shadow_tex_id;
+    glGenTextures(1, &shadow_tex_id);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, shadow_tex_id);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-  // for (auto light_ptr : lights_) {
-  //   GLuint shadow_tex_id;
-  //   glGenTextures(1, &shadow_tex_id);
-  //   glBindTexture(GL_TEXTURE_CUBE_MAP, shadow_tex_id);
-  //   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  //   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  //   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  //   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  //   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    for (int i = 0; i < 6; ++i) {   
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
+                   kShadowTexWidth, kShadowTexHeight, 0, GL_DEPTH_COMPONENT, 
+                   GL_FLOAT, NULL);
+    }
 
-  //   for (int i = 0; i < 6; ++i) {   
-  //     glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, 
-  //                  kShadowTexWidth, kShadowTexHeight, 0, GL_DEPTH_COMPONENT, 
-  //                  GL_FLOAT, NULL);
-  //   }
+    shadow_tex_id_list_.push_back(shadow_tex_id);
 
-  //   shadow_tex_id_list_.push_back(shadow_tex_id);
+    GLuint shadow_fbo_id;
+    glGenFramebuffers(1, &shadow_fbo_id);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_id);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow_tex_id, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-  //   GLuint shadow_fbo_id;
-  //   glGenFramebuffers(1, &shadow_fbo_id);
-  //   glBindFramebuffer(GL_FRAMEBUFFER, shadow_fbo_id);
-  //   glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow_tex_id, 0);
-  //   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    shadow_fbo_id_list_.push_back(shadow_fbo_id);
+  }
 
-  //   shadow_fbo_id_list_.push_back(shadow_fbo_id);
-  // }
-
-  // glGenVertexArrays(1, &shadow_pass_vao_id_);
+  glGenVertexArrays(1, &shadow_pass_vao_id_);
 }
 
 void App::Cleanup() {
-  // glDeleteVertexArrays(1, &shadow_pass_vao_id_);
+  glDeleteVertexArrays(1, &shadow_pass_vao_id_);
   
-  // glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list_.size()), 
-  //                      &shadow_fbo_id_list_[0]);
+  if (shadow_fbo_id_list_.size() != 0) {
+    glDeleteFramebuffers(static_cast<GLsizei>(shadow_fbo_id_list_.size()), 
+                        &shadow_fbo_id_list_[0]);
+  }
 
-  // glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list_.size()), 
-  //                  &shadow_tex_id_list_[0]);
+  if (shadow_tex_id_list_.size() != 0) {
+    glDeleteTextures(static_cast<GLsizei>(shadow_tex_id_list_.size()), 
+                    &shadow_tex_id_list_[0]);
+  }
 
-  // shadow_pass_program_.Destroy();
+  shadow_pass_program_.Destroy();
 
-  // glDeleteVertexArrays(1, &light_pass_vao_id_);
+  glDeleteVertexArrays(1, &light_pass_vao_id_);
   
-  // light_pass_program_.Destroy();
+  light_pass_program_.Destroy();
 
   resource_manager_.Cleanup();
 

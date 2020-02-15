@@ -85,13 +85,18 @@ void GLResourceManager::CreateMeshResources(const Mesh& mesh) {
     mesh_mtl_id_gl_id_map_[id] = 0;
   }
 
-  GLuint ibo_id;
-  glGenBuffers(1, &ibo_id);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               mesh.index_data.size() * sizeof(uint32_t),
-               &mesh.index_data[0], GL_STATIC_DRAW);
-  mesh_ibo_gl_id_map_[id] = ibo_id;
+  if (mesh.index_data.size() != 0) {
+    GLuint ibo_id;
+    glGenBuffers(1, &ibo_id);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                mesh.index_data.size() * sizeof(uint32_t),
+                &mesh.index_data[0], GL_STATIC_DRAW);
+    mesh_ibo_gl_id_map_[id] = ibo_id;
+  }
+  else {
+    mesh_ibo_gl_id_map_[id] = 0;
+  }
 }
 
 void GLResourceManager::CreateTextureResources(const Texture& texture) {

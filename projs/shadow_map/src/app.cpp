@@ -69,7 +69,7 @@ void App::ShadowPass() {
       }
 
       for (auto mesh: entity_ptr->GetModel()->GetMeshes()) {
-        glm::mat4 model_mat = entity_ptr->CalcTransform();
+        glm::mat4 model_mat = entity_ptr->ComputeTransform();
         glm::mat4 view_mat = 
             glm::lookAt(light_ptr->position,
                         light_ptr->position + light_ptr->direction,
@@ -125,7 +125,7 @@ void App::LightPass() {
     }
 
     for (auto& mesh : entity_ptr->GetModel()->GetMeshes()) {
-      glm::mat4 model_mat = entity_ptr->CalcTransform();
+      glm::mat4 model_mat = entity_ptr->ComputeTransform();
       
       LightPass_SetTransformUniforms_Mesh(mesh, model_mat, view_mat, proj_mat);
 

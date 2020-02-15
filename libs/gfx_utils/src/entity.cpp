@@ -18,7 +18,7 @@ Entity::Entity(const std::string& name) {
   rotation_ = glm::quat(glm::vec3(0.f, 0.f, 0.f));
 }
 
-glm::mat4 Entity::CalcTransform() const {
+glm::mat4 Entity::ComputeTransform() const {
   glm::mat4 model_mat = glm::translate(glm::mat4(1.f), location_) *
                         glm::mat4_cast(rotation_) *
                         glm::scale(scale_);
@@ -26,7 +26,7 @@ glm::mat4 Entity::CalcTransform() const {
   if (parent_ != nullptr) {
     // TODO(colintan): May be inefficient if a parent has multiple children,
     // and each child is calculating the same parent transform
-    model_mat = parent_->CalcTransform() * model_mat;
+    model_mat = parent_->ComputeTransform() * model_mat;
   }
 
   return model_mat;
