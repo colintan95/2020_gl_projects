@@ -25,16 +25,9 @@ public:
 private:
   void MainLoop();
 
-  void ShadowPass();
-  
-  void LightPass();
+  void GeometryPass();
 
-  void LightPass_SetTransformUniforms_Mesh(gfx_utils::Mesh& mesh,
-                                           glm::mat4& model_mat,
-                                           glm::mat4& view_mat,
-                                           glm::mat4& proj_mat);
-  void LightPass_SetMaterialUniforms_Mesh(gfx_utils::Mesh& mesh);
-  void LightPass_SetLightUniforms_Mesh(gfx_utils::Mesh& mesh);
+  void SSAOPass();
 
   void Startup();
 
@@ -44,20 +37,30 @@ private:
   gfx_utils::Window window_;
   gfx_utils::Camera camera_;
 
-  gfx_utils::Program light_pass_program_;
-  gfx_utils::Program shadow_pass_program_;
-
   gfx_utils::Scene scene_;
 
   gfx_utils::GLResourceManager resource_manager_;
 
   std::vector<std::shared_ptr<gfx_utils::PointLight>> lights_;
 
-  GLuint light_pass_vao_id_;
+  gfx_utils::Program geom_pass_program_;
+  GLuint geom_pass_vao_;
 
-  GLuint shadow_pass_vao_id_;
-  std::vector<GLuint> shadow_tex_id_list_;
-  std::vector<GLuint> shadow_fbo_id_list_;
+  GLuint gbuf_fbo_;
+  GLuint gbuf_depth_rbo_;
+
+  GLuint gbuf_pos_tex_;
+  GLuint gbuf_normal_tex_;
+  GLuint gbuf_albedo_spec_tex_;
+
+  gfx_utils::Program ssao_pass_program_;
+  GLuint ssao_pass_vao_;
+
+  GLuint ssao_pass_quad_vbo_;
+
+  std::vector<glm::vec3> ssao_kernel_;
+
+  GLuint ssao_noise_tex_;
 };
 
 #endif // APP_H_
