@@ -218,9 +218,9 @@ void App::SSAOPass() {
 
   glUseProgram(ssao_blur_program_.GetProgramId());
 
-  //glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo_);
 
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, ssao_color_tex_);
@@ -266,7 +266,7 @@ void App::LightPass() {
   light_pass_program_.GetUniform("ambient_tex").Set(2);
 
   glActiveTexture(GL_TEXTURE3);
-  glBindTexture(GL_TEXTURE_2D, ssao_color_tex_);         
+  glBindTexture(GL_TEXTURE_2D, ssao_blur_tex_);         
   light_pass_program_.GetUniform("ssao_tex").Set(3);
 
   light_pass_program_.GetUniform("ambient_intensity")
