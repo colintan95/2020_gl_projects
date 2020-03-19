@@ -26,10 +26,14 @@ private:
   void MainLoop();
 
   void GeometryPass();
-
   void SSAOPass();
+  void LightPass();
 
   void Startup();
+
+  void SetupGeometryPass();
+  void SetupSSAOPass();
+  void SetupLightPass();
 
   void Cleanup();
 
@@ -51,16 +55,28 @@ private:
 
   GLuint gbuf_pos_tex_;
   GLuint gbuf_normal_tex_;
-  GLuint gbuf_albedo_spec_tex_;
+  GLuint gbuf_ambient_tex_;
 
   gfx_utils::Program ssao_pass_program_;
-  GLuint ssao_pass_vao_;
+  gfx_utils::Program ssao_blur_program_;
 
+  GLuint ssao_fbo_;
+  GLuint ssao_color_tex_;
+
+  GLuint ssao_blur_fbo_;
+  GLuint ssao_blur_tex_;
+
+  GLuint ssao_pass_vao_;
   GLuint ssao_pass_quad_vbo_;
 
   std::vector<glm::vec3> ssao_kernel_;
 
   GLuint ssao_noise_tex_;
+
+  gfx_utils::Program light_pass_program_;
+
+  GLuint light_pass_vao_;
+  GLuint light_pass_quad_vbo_;
 };
 
 #endif // APP_H_

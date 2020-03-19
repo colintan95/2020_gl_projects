@@ -1,6 +1,5 @@
 #version 330 core
-out vec4 out_color;
-// out float out_occlusion;
+out float out_occlusion;
 
 in vec2 frag_texcoord;
 
@@ -51,7 +50,5 @@ void main() {
 
   occlusion = 1.0 - (occlusion / kernel_size);
 
-  // out_occlusion = occlusion
-
-  out_color = vec4(occlusion, occlusion, occlusion, 1);
+  out_occlusion = occlusion;
 }

@@ -26,6 +26,10 @@ static const std::string kGeomPassFragShaderPath = "shaders/geom_pass.frag";
 
 static const std::string kSSAOPassVertShaderPath = "shaders/ssao_pass.vert";
 static const std::string kSSAOPassFragShaderPath = "shaders/ssao_pass.frag";
+static const std::string kSSAOBlurFragShaderPath = "shaders/ssao_blur.frag";
+
+static const std::string kLightPassVertShaderPath = "shaders/light_pass.vert";
+static const std::string kLightPassFragShaderPath = "shaders/light_pass.frag";
 
 // Format of vertex - {pos_x, pos_y, pos_z, texcoord_u, texcoord_v}
 static const float kQuadVertices[] = {
@@ -47,13 +51,12 @@ void App::MainLoop() {
   bool should_quit = false;
 
   while (!should_quit) {
-    // ShadowPass();
-
-    // LightPass();
 
     GeometryPass();
 
     SSAOPass();
+
+    LightPass();
 
     window_.SwapBuffers();
     window_.TickMainLoop();
@@ -87,6 +90,32 @@ void App::GeometryPass() {
     }
 
     for (auto& mesh : entity_ptr->GetModel()->GetMeshes()) {
+
+      const auto& mtl_list = mesh.material_list;
+
+      for (int i = 0; i < mtl_list.size(); ++i) {
+        const auto& mtl = mtl_list[i];
+
+        geom_pass_program_.GetUniform("materials", i, "ambient_color")
+                          .Set(mtl.ambient_color);
+
+        if (!mtl.ambient_texname.empty()) {
+          geom_pass_program_.GetUniform("materials", i, "has_ambient_tex")
+                            .Set(true);
+
+          glActiveTexture(GL_TEXTURE1);
+          GLuint tex_gl_id = 
+              resource_manager_.GetTextureId(mtl.ambient_texname);
+          glBindTexture(GL_TEXTURE_2D, tex_gl_id);
+          geom_pass_program_.GetUniform("materials", i, "ambient_texture")
+                            .Set(1);
+        }
+        else {
+          geom_pass_program_.GetUniform("materials", i, "has_ambient_tex")
+                            .Set(false);
+        }           
+      }       
+
       glm::mat4 model_mat = entity_ptr->ComputeTransform();
       glm::mat4 mv_mat = view_mat * model_mat;
       glm::mat4 mvp_mat = proj_mat * view_mat * model_mat;
@@ -119,6 +148,13 @@ void App::GeometryPass() {
       glEnableVertexAttribArray(2);
       glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
+      GLuint mtl_vbo_id =
+          resource_manager_.GetMeshVboId(mesh.id, 
+                                         gfx_utils::kVertTypeMtlId);
+      glBindBuffer(GL_ARRAY_BUFFER, mtl_vbo_id);
+      glEnableVertexAttribArray(3);
+      glVertexAttribPointer(3, 1, GL_UNSIGNED_INT, GL_FALSE, 0, (GLvoid*)0);
+
       glDrawArrays(GL_TRIANGLES, 0, mesh.num_verts);
     }
   }
@@ -126,16 +162,17 @@ void App::GeometryPass() {
   glBindVertexArray(0);
 
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  glUseProgram(0);
 }
 
 void App::SSAOPass() {
   glUseProgram(ssao_pass_program_.GetProgramId());
   glViewport(0, 0, kWindowWidth, kWindowHeight);
 
-  glBindVertexArray(ssao_pass_vao_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
 
-  // glClear(GL_COLOR_BUFFER_BIT);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   for (int i = 0; i < 64; ++i) {
     ssao_pass_program_.GetUniform("samples", i).Set(ssao_kernel_[i]);
@@ -159,6 +196,8 @@ void App::SSAOPass() {
   glBindTexture(GL_TEXTURE_2D, ssao_noise_tex_);      
   ssao_pass_program_.GetUniform("noise_tex").Set(2);
 
+  glBindVertexArray(ssao_pass_vao_);
+
   glBindBuffer(GL_ARRAY_BUFFER, ssao_pass_quad_vbo_);
 
   glEnableVertexAttribArray(0);
@@ -172,6 +211,84 @@ void App::SSAOPass() {
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   glBindVertexArray(0);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  // Apply blur to SSAO
+
+  glUseProgram(ssao_blur_program_.GetProgramId());
+
+  //glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo_);
+
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, ssao_color_tex_);
+  ssao_pass_program_.GetUniform("ssao_tex").Set(0);
+
+  glBindVertexArray(ssao_pass_vao_);
+
+  glBindBuffer(GL_ARRAY_BUFFER, ssao_pass_quad_vbo_);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 
+                        (void*)0);
+
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 
+                        (void*)(3 * sizeof(float)));
+
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  glBindVertexArray(0);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  glUseProgram(0);
+}
+
+void App::LightPass() {
+  glUseProgram(light_pass_program_.GetProgramId());
+  glViewport(0, 0, kWindowWidth, kWindowHeight);
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, gbuf_pos_tex_);
+  light_pass_program_.GetUniform("pos_tex").Set(0);
+
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, gbuf_normal_tex_);         
+  light_pass_program_.GetUniform("normal_tex").Set(1);
+
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_2D, gbuf_ambient_tex_);         
+  light_pass_program_.GetUniform("ambient_tex").Set(2);
+
+  glActiveTexture(GL_TEXTURE3);
+  glBindTexture(GL_TEXTURE_2D, ssao_color_tex_);         
+  light_pass_program_.GetUniform("ssao_tex").Set(3);
+
+  light_pass_program_.GetUniform("ambient_intensity")
+                     .Set(glm::vec3(0.5f, 0.5f, 0.5f));
+
+  glBindVertexArray(light_pass_vao_);
+
+  glBindBuffer(GL_ARRAY_BUFFER, light_pass_quad_vbo_);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 
+                        (void*)0);
+
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 
+                        (void*)(3 * sizeof(float)));
+
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+  glBindVertexArray(0);
+
+  glUseProgram(0);
 }
 
 void App::Startup() {
@@ -198,12 +315,19 @@ void App::Startup() {
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
 
+  SetupGeometryPass();
+
+  SetupSSAOPass();
+
+  SetupLightPass();
+}
+
+void App::SetupGeometryPass() {
   if (!geom_pass_program_.CreateFromFiles(kGeomPassVertShaderPath, 
                                           kGeomPassFragShaderPath)) {
     std::cerr << "Could not create geometry pass program." << std::endl;
     exit(1);
   }
-  glUseProgram(geom_pass_program_.GetProgramId());
 
   glGenVertexArrays(1, &geom_pass_vao_);
 
@@ -230,14 +354,14 @@ void App::Startup() {
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, 
                          gbuf_normal_tex_, 0);
 
-  glGenTextures(1, &gbuf_albedo_spec_tex_);
-  glBindTexture(GL_TEXTURE_2D, gbuf_albedo_spec_tex_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kWindowWidth, kWindowHeight, 0, 
-               GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  glGenTextures(1, &gbuf_ambient_tex_);
+  glBindTexture(GL_TEXTURE_2D, gbuf_ambient_tex_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, kWindowWidth, kWindowHeight, 0, 
+               GL_RGB, GL_FLOAT, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, 
-                         gbuf_albedo_spec_tex_, 0);
+                         gbuf_ambient_tex_, 0);
 
   GLuint gbuf_attachments[3] = {
     GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2
@@ -255,13 +379,45 @@ void App::Startup() {
   }
   
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
+void App::SetupSSAOPass() {
   if (!ssao_pass_program_.CreateFromFiles(kSSAOPassVertShaderPath, 
                                           kSSAOPassFragShaderPath)) {
     std::cerr << "Could not create ssao pass program." << std::endl;
     exit(1);
   }
-  glUseProgram(ssao_pass_program_.GetProgramId());
+
+  if (!ssao_blur_program_.CreateFromFiles(kSSAOPassVertShaderPath, 
+                                          kSSAOBlurFragShaderPath)) {
+    std::cerr << "Could not create ssao blur program." << std::endl;
+    exit(1);
+  }
+
+  glGenFramebuffers(1, &ssao_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_fbo_);
+
+  glGenTextures(1, &ssao_color_tex_);
+  glBindTexture(GL_TEXTURE_2D, ssao_color_tex_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, kWindowWidth, kWindowHeight, 0, GL_RGB, 
+               GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                         ssao_color_tex_, 0);
+
+  glGenFramebuffers(1, &ssao_blur_fbo_);
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo_);  
+
+  glBindFramebuffer(GL_FRAMEBUFFER, ssao_blur_fbo_);
+  glGenTextures(1, &ssao_blur_tex_);
+  glBindTexture(GL_TEXTURE_2D, ssao_blur_tex_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, kWindowWidth, kWindowHeight, 0, GL_RGB, 
+               GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 
+                         ssao_blur_tex_, 0);                     
 
   glGenVertexArrays(1, &ssao_pass_vao_);
 
@@ -269,8 +425,6 @@ void App::Startup() {
   glBindBuffer(GL_ARRAY_BUFFER, ssao_pass_quad_vbo_);
   glBufferData(GL_ARRAY_BUFFER, sizeof(kQuadVertices), &kQuadVertices, 
                GL_STATIC_DRAW);
-
-  glUseProgram(0);
 
   std::uniform_real_distribution<GLfloat> random_floats(0.f, 1.f);
   std::default_random_engine generator;
@@ -312,18 +466,44 @@ void App::Startup() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
-void App::Cleanup() {
-  glDeleteTextures(1, &ssao_noise_tex_);
+void App::SetupLightPass() {
+  if (!light_pass_program_.CreateFromFiles(kLightPassVertShaderPath, 
+                                           kLightPassFragShaderPath)) {
+    std::cerr << "Could not create light pass program." << std::endl;
+    exit(1);
+  }
 
-  glDeleteVertexArrays(1, &ssao_pass_vao_);
+  glGenVertexArrays(1, &light_pass_vao_);
+
+  glGenBuffers(1, &light_pass_quad_vbo_);
+  glBindBuffer(GL_ARRAY_BUFFER, light_pass_quad_vbo_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(kQuadVertices), &kQuadVertices, 
+               GL_STATIC_DRAW);
+}
+
+void App::Cleanup() {
+  glDeleteBuffers(1, &light_pass_quad_vbo_);
+
+  glDeleteVertexArrays(1, &light_pass_vao_);
+
+  light_pass_program_.Destroy();
+
+  glDeleteTextures(1, &ssao_noise_tex_);
 
   glDeleteBuffers(1, &ssao_pass_quad_vbo_);
 
+  glDeleteVertexArrays(1, &ssao_pass_vao_);
+
+  glDeleteTextures(1, &ssao_color_tex_);
+
+  glDeleteFramebuffers(1, &ssao_fbo_);
+
+  ssao_blur_program_.Destroy();
   ssao_pass_program_.Destroy();
 
   glDeleteRenderbuffers(1, &gbuf_depth_rbo_);
 
-  glDeleteTextures(1, &gbuf_albedo_spec_tex_);
+  glDeleteTextures(1, &gbuf_ambient_tex_);
   glDeleteTextures(1, &gbuf_normal_tex_);
   glDeleteTextures(1, &gbuf_pos_tex_);
 

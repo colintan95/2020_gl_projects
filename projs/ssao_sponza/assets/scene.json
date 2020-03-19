@@ -2,14 +2,15 @@
   "entities": [
     {
       "name": "sponza",
-      "model": "sponza"
+      "model": "sponza",
+      "scale": [0.05, 0.05, 0.05]
     }
   ],
   "models": [
     {
       "name": "sponza",
-      "file": "assets/sponza_original/sponza.obj",
-      "mtl_dir": "assets/sponza_original",
+      "file": "assets/sponza/sponza.obj",
+      "mtl_dir": "assets/sponza",
       "indexed": false
     }
   ],
