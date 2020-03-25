@@ -34,5 +34,10 @@ add_custom_command(TARGET deferred_sponza POST_BUILD COMMAND ${CMAKE_COMMAND}
 
 # In the binary folder, create a symlink to the assets folder
 add_custom_command(TARGET deferred_sponza POST_BUILD COMMAND ${CMAKE_COMMAND}
-    -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/assets" 
+    -E create_symlink "${ASSETS_DIR}" 
     "${CMAKE_CURRENT_BINARY_DIR}/assets")
+
+# In the binary folder, creat a symlink to the scene folder
+add_custom_command(TARGET deferred_sponza POST_BUILD COMMAND ${CMAKE_COMMAND}
+    -E create_symlink "${CMAKE_CURRENT_SOURCE_DIR}/scene" 
+    "${CMAKE_CURRENT_BINARY_DIR}/scene")

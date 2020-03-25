@@ -302,7 +302,7 @@ void App::Startup() {
     exit(1);
   }
 
-  scene_.LoadSceneFromJson("assets/scene.json");
+  scene_.LoadSceneFromJson("scene/scene.json");
 
   resource_manager_.SetScene(&scene_);
 
