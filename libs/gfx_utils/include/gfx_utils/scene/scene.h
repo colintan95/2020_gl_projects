@@ -18,6 +18,7 @@ namespace gfx_utils {
 using ModelPtr = std::shared_ptr<Model>;
 using EntityPtr = std::shared_ptr<Entity>;
 using TexturePtr = std::shared_ptr<Texture>;
+using CubemapPtr = std::shared_ptr<Cubemap>;
 using LightPtr = std::shared_ptr<Light>;
 
 using ModelList = std::vector<ModelPtr>;
@@ -29,6 +30,7 @@ using LightList = std::vector<std::shared_ptr<T>>;
 using ModelNameMap = std::unordered_map<std::string, ModelPtr>;
 using EntityNameMap = std::unordered_map<std::string, EntityPtr>;
 using TextureNameMap = std::unordered_map<std::string, TexturePtr>;
+using CubemapNameMap = std::unordered_map<std::string, CubemapPtr>;
 using LightNameMap = std::unordered_map<std::string, LightPtr>;
 
 class Scene {
@@ -45,10 +47,12 @@ public:
   LightList<T> GetLightsByType();
 
   const TextureNameMap& GetTextureNameMap();
+  const CubemapNameMap& GetCubemapNameMap();
 
   ModelPtr GetModel(const std::string& name);
   EntityPtr GetEntity(const std::string& name);
   TexturePtr GetTexture(const std::string& name);
+  CubemapPtr GetCubemap(const std::string& name);
 
 private:
   struct LightListEntry {
@@ -60,6 +64,7 @@ private:
   ModelNameMap models_;
   EntityNameMap entities_;    
   TextureNameMap textures_;
+  CubemapNameMap cubemaps_;
   LightNameMap lights_;
 
   ModelList models_list_;

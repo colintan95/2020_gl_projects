@@ -29,8 +29,11 @@ public:
 
   GLuint GetMeshVboId(MeshId id, VertType vert_type);
   GLuint GetMeshIboId(MeshId id);
+
   GLuint GetTextureId(TextureId id);
   GLuint GetTextureId(const std::string& texname);
+
+  GLuint GetCubemapId(const std::string& name);
 
   void SetScene(Scene* scene) {
     scene_ = scene;
@@ -39,11 +42,13 @@ public:
 private:
   void CreateMeshResources(const Mesh& mesh);
   void CreateTextureResources(const Texture& texture);
+  void CreateCubemapResources(const Cubemap& cubemap);
 
 private:
   Scene* scene_;
 
   std::unordered_map<TextureId, GLuint> texture_gl_id_map_;
+  std::unordered_map<CubemapId, GLuint> cubemap_gl_id_map_;
 
   std::unordered_map<MeshId, GLuint> mesh_pos_gl_id_map_;
   std::unordered_map<MeshId, GLuint> mesh_normal_gl_id_map_;

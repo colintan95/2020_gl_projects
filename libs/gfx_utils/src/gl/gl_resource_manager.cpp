@@ -1,5 +1,7 @@
 #include "gfx_utils/gl/gl_resource_manager.h"
 
+#include <iostream>
+
 namespace gfx_utils {
 
 void GLResourceManager::CreateGLResources() {
@@ -20,9 +22,22 @@ void GLResourceManager::CreateGLResources() {
 
     CreateTextureResources(*texture_ptr);
   }
+
+  auto& cubemap_name_map = scene_->GetCubemapNameMap();
+
+  // Allocate cubemaps 
+  for (auto it = cubemap_name_map.begin(); it != cubemap_name_map.end(); ++it) {
+    auto cubemap_ptr = it->second;
+
+    CreateCubemapResources(*cubemap_ptr);
+  }
 }
 
 void GLResourceManager::Cleanup() {
+  for (auto it : cubemap_gl_id_map_) {
+    glDeleteTextures(1, &it.second);
+  }
+
   for (auto it : texture_gl_id_map_) {
     glDeleteTextures(1, &it.second);
   }
@@ -108,14 +123,52 @@ void GLResourceManager::CreateTextureResources(const Texture& texture) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  GLenum format = texture.has_alpha ? GL_RGBA : GL_RGB;
-  glTexImage2D(GL_TEXTURE_2D, 0, format, texture.tex_width,
-               texture.tex_height, 0, format, GL_UNSIGNED_BYTE,
-               &texture.tex_data[0]);
+  GLenum format;
+  if (texture.image.format == kImageFormatRGBA) {
+    format = GL_RGBA;
+  }
+  else if (texture.image.format == kImageFormatRGB) {
+    format = GL_RGB;
+  }
+
+  glTexImage2D(GL_TEXTURE_2D, 0, format, texture.image.width,
+               texture.image.height, 0, format, GL_UNSIGNED_BYTE,
+               &texture.image.data[0]);
 
   glBindTexture(GL_TEXTURE_2D, 0);
 
   texture_gl_id_map_[texture.id] = texture_id;
+}
+
+void GLResourceManager::CreateCubemapResources(const Cubemap& cubemap) {
+  GLuint texture_id;
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id);
+
+  for (int i = 0; i < cubemap.images.size(); ++i) {
+    const Image& image = cubemap.images[i];
+
+    GLenum format;
+    if (image.format == kImageFormatRGBA) {
+      format = GL_RGBA;
+    }
+    else if (image.format == kImageFormatRGB) {
+      format = GL_RGB;
+    }
+
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, image.width, 
+                 image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, &image.data[0]);
+    
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+  }
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+  cubemap_gl_id_map_[cubemap.id] = texture_id;
 }
 
 GLuint GLResourceManager::GetMeshVboId(MeshId id, VertType vert_type) {
@@ -149,6 +202,12 @@ GLuint GLResourceManager::GetTextureId(const std::string& texname) {
   auto texture_ptr = scene_->GetTexture(texname);
 
   return texture_gl_id_map_[texture_ptr->id];
+}
+
+GLuint GLResourceManager::GetCubemapId(const std::string& name) {
+  auto cubemap_ptr = scene_->GetCubemap(name);
+
+  return cubemap_gl_id_map_[cubemap_ptr->id];
 }
 
 } // namespace gfx_utils

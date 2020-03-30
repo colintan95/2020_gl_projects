@@ -110,7 +110,7 @@ void ModelLoader::LoadVertexData(Mesh* mesh,
     mesh->index_data.push_back(vert_conversion_table[key]); 
   }         
 
-  mesh->num_verts = mesh->index_data.size();                
+  mesh->num_verts = static_cast<uint32_t>(mesh->index_data.size());
 }
 
 bool ModelLoader::LoadVertexDataNoIndex(Mesh* mesh, 
@@ -200,7 +200,7 @@ bool ModelLoader::LoadVertexDataNoIndex(Mesh* mesh,
 
   mesh->index_data.clear();
 
-  mesh->num_verts = mesh->pos_data.size();   
+  mesh->num_verts = static_cast<uint32_t>(mesh->pos_data.size());
 
   return true;
 }
@@ -225,14 +225,14 @@ void ModelLoader::LoadMaterialData(
       Material mtl;
 
       mtl.ambient_color  = glm::vec3(loader_mtl.ambient[0],
-                                      loader_mtl.ambient[1],
-                                      loader_mtl.ambient[2]);
+                                     loader_mtl.ambient[1],
+                                     loader_mtl.ambient[2]);
       mtl.diffuse_color  = glm::vec3(loader_mtl.diffuse[0],
-                                      loader_mtl.diffuse[1],
-                                      loader_mtl.diffuse[2]);
+                                     loader_mtl.diffuse[1],
+                                     loader_mtl.diffuse[2]);
       mtl.specular_color = glm::vec3(loader_mtl.specular[0],
-                                      loader_mtl.specular[1],
-                                      loader_mtl.specular[2]);
+                                     loader_mtl.specular[1],
+                                     loader_mtl.specular[2]);
       mtl.emission_color = glm::vec3(loader_mtl.emission[0],
                                     loader_mtl.emission[1],
                                     loader_mtl.emission[2]);
@@ -263,7 +263,8 @@ void ModelLoader::LoadMaterialData(
         mtl.specular_texname = loader_mtl.specular_texname;
       }
 
-      mtl_conversion_table[loader_id] = mesh->material_list.size();
+      mtl_conversion_table[loader_id] = 
+        static_cast<uint32_t>(mesh->material_list.size());
       mesh->material_list.push_back(mtl);
     }
 

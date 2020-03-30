@@ -1,0 +1,24 @@
+{
+  "entities": [
+    {
+      "name": "sphere",
+      "model": "sphere",
+      "position": [0.0, 0.0, -10.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ],
+  "models": [
+    {
+      "name": "sphere",
+      "file": "assets/sphere/sphere.obj",
+      "mtl_dir": "assets/sphere",
+      "indexed": false
+    }
+  ],
+  "cubemaps": [
+    {
+      "name": "skybox",
+      "directory": "assets/skybox"
+    }
+  ]
+}

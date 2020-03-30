@@ -144,55 +144,84 @@ bool Scene::LoadSceneFromJson(const std::string& path) {
   // Load the lights
 
   auto lights_it = json_obj.find("lights");
-  if (lights_it == json_obj.end()) {
-    std::cerr << "Could not find 'lights' json property" << std::endl;
-    return false;
-  }
 
-  auto lights_array = lights_it.value();
-  for (auto it = lights_array.begin(); it != lights_array.end(); ++it) {
-    DataSource data_src;
-    
-    auto light_prop = it.value();
-    for (auto& prop : light_prop.items()) {
-      DataEntry entry;
+  if (lights_it != json_obj.end()) {
 
-      auto key = prop.key();
-      auto val = prop.value();
+    auto lights_array = lights_it.value();
 
-      switch (val.type()) {
-      case json::value_t::array:
-        if (val.size() == 3) {
-          entry.val_vec3 = glm::vec3(val[0].get<float>(),
-                                     val[1].get<float>(),
-                                     val[2].get<float>());
-        }
-        else {
+    for (auto it = lights_array.begin(); it != lights_array.end(); ++it) {
+      DataSource data_src;
+      
+      auto light_prop = it.value();
+      for (auto& prop : light_prop.items()) {
+        DataEntry entry;
+
+        auto key = prop.key();
+        auto val = prop.value();
+
+        switch (val.type()) {
+        case json::value_t::array:
+          if (val.size() == 3) {
+            entry.val_vec3 = glm::vec3(val[0].get<float>(),
+                                      val[1].get<float>(),
+                                      val[2].get<float>());
+          }
+          else {
+            std::cerr << "Type not supported" << std::endl;
+          }
+          break;
+        case json::value_t::string:
+          entry.val_str = val.get<std::string>();
+          break;
+        case json::value_t::number_float:
+          entry.val_float = val.get<float>();
+          break;
+        default:
           std::cerr << "Type not supported" << std::endl;
         }
-        break;
-      case json::value_t::string:
-        entry.val_str = val.get<std::string>();
-        break;
-      case json::value_t::number_float:
-        entry.val_float = val.get<float>();
-        break;
-      default:
-        std::cerr << "Type not supported" << std::endl;
+
+        data_src.data_[key] = std::move(entry);
       }
 
-      data_src.data_[key] = std::move(entry);
+      const std::string& type = light_prop["type"];
+      LightPtr light_ptr = (*kLightLoadFuncTable.at(type))(data_src);
+
+      lights_[light_prop["name"]] = light_ptr;
+      
+      LightListEntry entry;
+      entry.type = type;
+      entry.ptr = light_ptr;
+      lights_list_.push_back(std::move(entry));
     }
+  }
+  else {
+    std::cerr << "Could not find 'lights' json property" << std::endl;
+  }
 
-    const std::string& type = light_prop["type"];
-    LightPtr light_ptr = (*kLightLoadFuncTable.at(type))(data_src);
+  // Load the cubemaps
 
-    lights_[light_prop["name"]] = light_ptr;
-    
-    LightListEntry entry;
-    entry.type = type;
-    entry.ptr = light_ptr;
-    lights_list_.push_back(std::move(entry));
+  auto cubemaps_it = json_obj.find("cubemaps");
+
+  if (cubemaps_it != json_obj.end()) {
+    auto cubemaps_array = cubemaps_it.value();
+
+    for (auto it = cubemaps_array.begin(); it != cubemaps_array.end(); ++it) {
+      auto cubemap_prop = it.value();
+
+      const std::string& name = cubemap_prop["name"];
+      const std::string& dir = cubemap_prop["directory"];
+
+      auto cubemap_ptr = std::make_shared<Cubemap>();
+      if (!CreateCubemapFromFiles(cubemap_ptr.get(), dir)) {
+        std::cerr << "Failed to load cubemap: " << name << std::endl;
+        continue;
+      }
+
+      cubemaps_[name] = cubemap_ptr;
+    }
+  }
+  else {
+    std::cerr << "Could not find 'cubemaps' json property" << std::endl;
   }
 
   return true;
@@ -236,6 +265,10 @@ const TextureNameMap& Scene::GetTextureNameMap() {
   return textures_;
 }
 
+const CubemapNameMap& Scene::GetCubemapNameMap() {
+  return cubemaps_;
+}
+
 ModelPtr Scene::GetModel(const std::string& name) {
   auto it = models_.find(name);
   if (it == models_.end()) {
@@ -255,6 +288,14 @@ EntityPtr Scene::GetEntity(const std::string& name) {
 TexturePtr Scene::GetTexture(const std::string& name) {
   auto it = textures_.find(name);
   if (it == textures_.end()) {
+    return nullptr;
+  }
+  return it->second;
+}
+
+CubemapPtr Scene::GetCubemap(const std::string& name) {
+  auto it = cubemaps_.find(name);
+  if (it == cubemaps_.end()) {
     return nullptr;
   }
   return it->second;
